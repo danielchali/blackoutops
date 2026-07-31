@@ -200,7 +200,7 @@ function buildGun(i){
              add(0.08,0.17,0.24,0,-0.10,0.14,wood); }
   if(i===3){ const b=add(0.02,0.10,0.44,0,0.02,-0.20,mkMat(0xb9c4cc,0.95)); b.rotation.x=0.06;
              add(0.05,0.06,0.16,0,-0.02,0.06,mkMat(0x1d1f22,0.2)); }
-  g.position.set(0.26,-0.24,-0.5);
+  g.position.set(0.26,-0.24,-0.5); g.scale.setScalar(0.55);
   g.visible = false;
   vm.add(g); return g;
 }
@@ -442,7 +442,7 @@ function update(dt){
   const g = gunMeshes[cur];
   const idle = Math.sin(now()/1000*2)*0.006;
   function now(){ return performance.now(); }
-  g.position.set(0.26, -0.24 + Math.sin(bob)*0.012 + idle, -0.5 + recoilKick*2.2);
+  g.position.set(0.30, -0.26 + Math.sin(bob)*0.012 + idle, -0.85 + recoilKick*2.2);
   g.rotation.set(-recoilKick*3 + (meleeAnim>0 ? -Math.sin((0.36-meleeAnim)/0.36*Math.PI)*1.1 : 0), swayT*1.2, meleeAnim>0 ? Math.sin((0.36-meleeAnim)/0.36*Math.PI)*0.5 : 0);
   if(meleeAnim>0) meleeAnim = Math.max(0, meleeAnim-dt);
   swayT = Math.max(0, swayT-dt);

@@ -250,7 +250,6 @@ function startWave(){
 
 // ---------- fx ----------
 const decals = [];
-const tracerGeo = new THREE.BufferGeometry();
 function tracer(a,b){
   const g = new THREE.BufferGeometry().setFromPoints([a,b]);
   const l = new THREE.Line(g, new THREE.LineBasicMaterial({ color:0xffe08a, transparent:true, opacity:0.85 }));
@@ -341,7 +340,6 @@ function hitScan(w, isMelee){
     ray.far = w.range;
     const targets = enemies.filter(e=>!e.dead).map(e=>e.obj);
     const hits = ray.intersectObjects(targets, true);
-    const wallHits = ray.intersectObject(scene, false);
     let end = ray.ray.origin.clone().add(d.clone().multiplyScalar(w.range));
     if(hits.length){
       const h = hits[0];

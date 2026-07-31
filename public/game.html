@@ -112,6 +112,7 @@ scene.add(sun);
 
 // ---------- world ----------
 const colliders = []; // {min:Vector3,max:Vector3} AABB in XZ
+const worldMeshes = []; // solid geometry that stops bullets
 const WORLD = 90;
 
 function box(w,h,dp,x,y,z,color,rough=0.9) {
@@ -122,6 +123,7 @@ function box(w,h,dp,x,y,z,color,rough=0.9) {
   m.position.set(x,y,z); m.castShadow = true; m.receiveShadow = true;
   scene.add(m);
   colliders.push(new THREE.Box3().setFromObject(m));
+  worldMeshes.push(m);
   return m;
 }
 
@@ -359,8 +361,11 @@ function hitScan(w, isMelee){
     ray.far = w.range;
     const targets = enemies.filter(e=>!e.dead).map(e=>e.obj);
     const hits = ray.intersectObjects(targets, true);
-    let end = ray.ray.origin.clone().add(d.clone().multiplyScalar(w.range));
-    if(hits.length){
+    // bullets stop at the first wall / crate / building in the path
+    const wall = ray.intersectObjects(worldMeshes, false)[0];
+    const wallDist = wall ? wall.distance : Infinity;
+    let end = ray.ray.origin.clone().add(d.clone().multiplyScalar(Math.min(w.range, wallDist)));
+    if(hits.length && hits[0].distance < wallDist){
       const h = hits[0];
       const e = enemies.find(x => x.obj === h.object.parent);
       if(e && !e.dead){
@@ -372,6 +377,13 @@ function hitScan(w, isMelee){
     }
     if(!isMelee) tracer(ray.ray.origin.clone().add(d.clone().multiplyScalar(0.6)), end);
   }
+}
+function hasLOS(from, to){
+  const dir = to.clone().sub(from);
+  const len = dir.length();
+  ray.set(from, dir.normalize());
+  ray.far = len;
+  return ray.intersectObjects(worldMeshes, false).length === 0;
 }
 function killEnemy(e, hs){
   e.dead = true; kills++;
@@ -497,7 +509,7 @@ function update(dt){
       e.legs[1].rotation.x = -Math.sin(e.walk)*0.7;
     }
     e.cd -= dt;
-    if(dist < e.range && e.cd <= 0 && !dead){
+    if(dist < e.range && e.cd <= 0 && !dead && hasLOS(e.obj.position.clone().setY(1.3), player.pos.clone())){
       e.cd = e.fire;
       const acc = Math.max(0.25, 1 - dist/e.range*0.55);
       if(Math.random() < acc){

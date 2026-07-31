@@ -193,14 +193,33 @@ function buildGun(i){
   const g = new THREE.Group();
   const dark = mkMat(0x24282c), grey = mkMat(0x3b4147), wood = mkMat(0x5a3a22,0.1);
   const add=(w,h,dp,x,y,z,mat)=>{ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,dp),mat); m.position.set(x,y,z); g.add(m); return m; };
-  if(i===0){ add(0.09,0.11,0.42,0,0,-0.16,dark); add(0.07,0.19,0.09,0,-0.14,0.02,grey); }
+  const skin = mkMat(0xc39a72, 0.05), glove = mkMat(0x2c2f33, 0.15), sleeve = mkMat(0x4b5340, 0.1);
+  // hand + forearm coming from the shoulder side (+z, and outward on x)
+  const hand=(x,y,z,rz,rx,side)=>{
+    const h = new THREE.Group();
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.13,0.15,0.17), glove); palm.position.set(0,0,0);
+    const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.06,0.06,0.10), glove); thumb.position.set(-side*0.07,0.05,-0.03);
+    const knuck = new THREE.Mesh(new THREE.BoxGeometry(0.135,0.05,0.09), skin); knuck.position.set(0,0.08,-0.03);
+    const wrist = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.12,0.14), skin); wrist.position.set(0,-0.02,0.14);
+    const arm  = new THREE.Mesh(new THREE.BoxGeometry(0.155,0.155,0.52), sleeve); arm.position.set(0,-0.04,0.44);
+    const cuff = new THREE.Mesh(new THREE.BoxGeometry(0.17,0.17,0.07), mkMat(0x3a4131,0.1)); cuff.position.set(0,-0.03,0.22);
+    [palm,thumb,knuck,wrist,arm,cuff].forEach(m=>h.add(m));
+    h.position.set(x,y,z); h.rotation.z = rz; h.rotation.x = rx;
+    g.add(h); return h;
+  };
+  if(i===0){ add(0.09,0.11,0.42,0,0,-0.16,dark); add(0.07,0.19,0.09,0,-0.14,0.02,grey);
+             hand(0.02,-0.15,0.05,-0.12,0.30,1); hand(-0.11,-0.20,0.02,0.55,0.30,-1); }
   if(i===1){ add(0.08,0.09,0.80,0,0,-0.30,dark); add(0.07,0.16,0.10,0,-0.12,0.05,grey);
-             add(0.06,0.12,0.22,0,-0.02,0.20,dark); add(0.05,0.05,0.26,0,0.07,-0.20,grey); }
+             add(0.06,0.12,0.22,0,-0.02,0.20,dark); add(0.05,0.05,0.26,0,0.07,-0.20,grey);
+             hand(0.02,-0.13,0.08,-0.10,0.28,1); hand(-0.06,-0.14,-0.42,0.75,0.05,-1); }
   if(i===2){ add(0.10,0.11,0.86,0,0,-0.32,dark); add(0.08,0.07,0.50,0,-0.09,-0.24,grey);
-             add(0.08,0.17,0.24,0,-0.10,0.14,wood); }
+             add(0.08,0.17,0.24,0,-0.10,0.14,wood); hand(0.02,-0.13,0.16,-0.10,0.26,1);
+             hand(-0.07,-0.15,-0.40,0.8,0.05,-1); }
   if(i===3){ const b=add(0.02,0.10,0.44,0,0.02,-0.20,mkMat(0xb9c4cc,0.95)); b.rotation.x=0.06;
-             add(0.05,0.06,0.16,0,-0.02,0.06,mkMat(0x1d1f22,0.2)); }
+             add(0.05,0.06,0.16,0,-0.02,0.06,mkMat(0x1d1f22,0.2));
+             hand(0.0,-0.03,0.10,-0.05,0.20,1); }
   g.position.set(0.26,-0.24,-0.5); g.scale.setScalar(0.55);
+
   g.visible = false;
   vm.add(g); return g;
 }

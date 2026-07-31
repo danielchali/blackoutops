@@ -170,7 +170,7 @@ const player = {
   pos: new THREE.Vector3(0, 1.7, 20),
   vel: new THREE.Vector3(),
   yaw: 0, pitch: 0,
-  hp: 100, onGround: true, radius: 0.45
+  hp: 100, onGround: true, radius: 0.45, regenT: 0, still: 0
 };
 let bob = 0;
 
@@ -438,7 +438,15 @@ function update(dt){
     if(keys['KeyS']) move.sub(fwd);
     if(keys['KeyD']) move.add(right);
     if(keys['KeyA']) move.sub(right);
-    if(move.lengthSq()>0){ move.normalize().multiplyScalar(speed*dt); bob += dt*(sprint>1?14:9); }
+    const moving = move.lengthSq() > 0;
+    if(moving){ move.normalize().multiplyScalar(speed*dt); bob += dt*(sprint>1?14:9); }
+    // health regeneration while holding still and not recently hit
+    player.regenT = Math.max(0, player.regenT - dt);
+    player.still = (moving || !player.onGround) ? 0 : player.still + dt;
+    if(player.still > 1.2 && player.regenT <= 0 && player.hp < 100){
+      player.hp = Math.min(100, player.hp + 11*dt);
+      hud();
+    }
     const nx = player.pos.clone(); nx.x += move.x; if(!collide(nx)) player.pos.x = nx.x;
     const nz = player.pos.clone(); nz.z += move.z; if(!collide(nz)) player.pos.z = nz.z;
   }
@@ -493,7 +501,7 @@ function update(dt){
       e.cd = e.fire;
       const acc = Math.max(0.25, 1 - dist/e.range*0.55);
       if(Math.random() < acc){
-        player.hp -= e.dmg; dmgFlash();
+        player.hp -= e.dmg; player.regenT = 3.5; player.still = 0; dmgFlash();
         if(player.hp<=0) gameOver();
       }
       if(e.range>5) tracer(e.obj.position.clone().setY(1.3), player.pos.clone());

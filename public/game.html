@@ -494,10 +494,11 @@ let firePressedEdge = false, wasFiring = false;
 
 // ---------- collision ----------
 function collide(pos){
+  const bodyHeight = pos.y < 1.35 ? 0.9 : 1.6;
   for(const b of colliders){
     if(pos.x + player.radius > b.min.x && pos.x - player.radius < b.max.x &&
        pos.z + player.radius > b.min.z && pos.z - player.radius < b.max.z &&
-       pos.y - 1.6 < b.max.y && pos.y > b.min.y - 0.2) return true;
+       pos.y - bodyHeight < b.max.y && pos.y > b.min.y - 0.2) return true;
   }
   return Math.abs(pos.x) > WORLD-1.5 || Math.abs(pos.z) > WORLD-1.5;
 }

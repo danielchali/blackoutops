@@ -351,9 +351,13 @@ addEventListener('keydown', e => {
   if(e.code==='Digit4') swap(3);
   if(e.code==='KeyR') reload();
   if(e.code==='KeyV') quickMelee();
-  if(e.code==='Space' && player.onGround){ player.vel.y = 6.2; player.onGround=false; }
+  if(e.code==='ControlLeft' || e.code==='ControlRight' || e.code==='KeyC') player.crouch = true;
+  if(e.code==='Space' && player.onGround && !player.crouch){ player.vel.y = 6.2; player.onGround=false; }
 });
-addEventListener('keyup', e => keys[e.code] = false);
+addEventListener('keyup', e => {
+  keys[e.code] = false;
+  if(e.code==='ControlLeft' || e.code==='ControlRight' || e.code==='KeyC') player.crouch = false;
+});
 
 let firing = false;
 addEventListener('mousedown', e => { if(e.button===0) firing = true; });

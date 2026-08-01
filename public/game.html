@@ -250,13 +250,48 @@ function spawnEnemy(t){
   const rLeg  = lLeg.clone(); rLeg.position.x = 0.16;
   const lArm  = new THREE.Mesh(new THREE.BoxGeometry(0.18,0.7,0.2), skin); lArm.position.set(-0.4,1.25,0);
   const rArm  = lArm.clone(); rArm.position.x = 0.4;
-  const gun   = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.08,0.6), dark); gun.position.set(0.4,1.2,-0.35);
-  [torso,head,helm,lLeg,rLeg,lArm,rArm,gun].forEach(m=>{ m.castShadow=true; g.add(m); });
+  // arms raised forward, holding the weapon
+  lArm.geometry = new THREE.BoxGeometry(0.17,0.17,0.62); lArm.position.set(-0.26,1.32,-0.28);
+  rArm.geometry = new THREE.BoxGeometry(0.17,0.17,0.55); rArm.position.set(0.3,1.3,-0.16);
+
+  // ---- weapon in hands (per enemy type) ----
+  const gunG = new THREE.Group(); gunG.position.set(0.02,1.3,-0.42);
+  const metal = new THREE.MeshStandardMaterial({ color:0x2a2d31, roughness:0.55, metalness:0.6 });
+  const wood  = new THREE.MeshStandardMaterial({ color:0x5a3c22, roughness:0.85 });
+  const add = (geo,mat,x,y,z,rx)=>{ const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); if(rx) m.rotation.x=rx; m.castShadow=true; gunG.add(m); return m; };
+  let muzzleZ = -0.5;
+  if(t===0){ // Grunt: assault rifle
+    add(new THREE.BoxGeometry(0.08,0.1,0.86), metal, 0,0,-0.2);
+    add(new THREE.BoxGeometry(0.05,0.05,0.34), metal, 0,0.005,-0.78);      // barrel
+    add(new THREE.BoxGeometry(0.07,0.22,0.09), metal, 0,-0.15,-0.02);      // mag
+    add(new THREE.BoxGeometry(0.07,0.12,0.1),  metal, 0,-0.1,0.16);        // grip
+    add(new THREE.BoxGeometry(0.07,0.11,0.3),  metal, 0,0,0.36);           // stock
+    add(new THREE.BoxGeometry(0.03,0.06,0.06), metal, 0,0.08,-0.5);        // sight
+    muzzleZ = -0.95;
+  } else if(t===1){ // Heavy: combat shotgun
+    add(new THREE.BoxGeometry(0.1,0.12,0.7), wood, 0,0,-0.1);
+    add(new THREE.CylinderGeometry(0.035,0.035,0.62,8), metal, 0,0.045,-0.5, Math.PI/2);
+    add(new THREE.CylinderGeometry(0.03,0.03,0.5,8),  metal, 0,-0.02,-0.44, Math.PI/2);
+    add(new THREE.BoxGeometry(0.09,0.14,0.28), wood, 0,-0.04,0.32);
+    muzzleZ = -0.82;
+  } else { // Rusher: compact SMG
+    add(new THREE.BoxGeometry(0.08,0.11,0.46), metal, 0,0,-0.08);
+    add(new THREE.BoxGeometry(0.04,0.04,0.2),  metal, 0,0.01,-0.4);
+    add(new THREE.BoxGeometry(0.06,0.24,0.07), metal, 0,-0.16,-0.02);
+    add(new THREE.BoxGeometry(0.06,0.11,0.09), metal, 0,-0.09,0.12);
+    muzzleZ = -0.52;
+  }
+  const flash = new THREE.Mesh(new THREE.SphereGeometry(0.11,6,6), new THREE.MeshBasicMaterial({ color:0xffcc55, transparent:true, opacity:0 }));
+  flash.position.set(0,0.01,muzzleZ); gunG.add(flash);
+  g.add(gunG);
+
+  [torso,head,helm,lLeg,rLeg,lArm,rArm].forEach(m=>{ m.castShadow=true; g.add(m); });
   let a; do { a = Math.random()*Math.PI*2; } while(false);
   const dist = 45 + Math.random()*35;
   g.position.set(Math.cos(a)*dist, 0, Math.sin(a)*dist);
   scene.add(g);
-  enemies.push({ obj:g, hp:type.hp, max:type.hp, ...type, legs:[lLeg,rLeg], head, walk:Math.random()*6, cd:Math.random()*2, dead:false, dt:0 });
+  enemies.push({ obj:g, hp:type.hp, max:type.hp, ...type, legs:[lLeg,rLeg], head, gunG, flash, flashT:0, muzzleZ, walk:Math.random()*6, cd:Math.random()*2, dead:false, dt:0 });
+
 }
 
 let wave = 1, kills = 0, spawning = false;

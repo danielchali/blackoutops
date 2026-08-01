@@ -522,10 +522,15 @@ function update(dt){
   camera.rotation.x = player.pitch + recoilKick;
   recoilKick *= Math.pow(0.001, dt);
 
+  // crouch height transition
+  const targetHeight = player.crouch ? player.crouchEyeHeight : player.eyeHeight;
+  player.height += (targetHeight - player.height) * (1 - Math.pow(0.0001, dt));
+
   // movement
   if(!dead){
-    const sprint = keys['ShiftLeft'] ? 1.65 : 1;
-    const speed = 5.2 * sprint;
+    const sprint = keys['ShiftLeft'] && !player.crouch ? 1.65 : 1;
+    const crouchMul = player.crouch ? 0.5 : 1;
+    const speed = 5.2 * sprint * crouchMul;
     const fwd = new THREE.Vector3(-Math.sin(player.yaw),0,-Math.cos(player.yaw));
     const right = new THREE.Vector3(Math.cos(player.yaw),0,-Math.sin(player.yaw));
     const move = new THREE.Vector3();
@@ -548,7 +553,7 @@ function update(dt){
   // gravity
   player.vel.y -= 17*dt;
   player.pos.y += player.vel.y*dt;
-  if(player.pos.y < 1.7){ player.pos.y = 1.7; player.vel.y = 0; player.onGround = true; }
+  if(player.pos.y < player.height){ player.pos.y = player.height; player.vel.y = 0; player.onGround = true; }
 
   camera.position.copy(player.pos);
   camera.position.y += Math.sin(bob)*0.045;

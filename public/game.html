@@ -601,6 +601,18 @@ function update(dt){
     }
   }
 
+  // pickups
+  for(let i=pickups.length-1;i>=0;i--){
+    const p = pickups[i];
+    p.t -= dt; p.bob += dt*2.5;
+    p.obj.rotation.y += dt*1.6;
+    p.obj.position.y = 0.62 + Math.sin(p.bob)*0.09;
+    const d = p.obj.position.distanceTo(new THREE.Vector3(player.pos.x, p.obj.position.y, player.pos.z));
+    if(!dead && d < 1.6){ collectPickup(p); pickups.splice(i,1); continue; }
+    if(p.t <= 0){ scene.remove(p.obj); pickups.splice(i,1); }
+    else if(p.t < 6) p.obj.visible = Math.floor(p.t*6)%2 === 0;
+  }
+
 
   // wave progression
   if(alive===0 && !spawning && !dead){

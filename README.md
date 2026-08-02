@@ -1,4 +1,4 @@
-# Pixel Fury
+# Blackout ops
 
 A fully static first-person shooter experience that can be hosted on GitHub Pages.
 

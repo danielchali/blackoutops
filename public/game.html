@@ -67,7 +67,7 @@
   .touch-pad .move-btn { width:56px; height:56px; font-size:22px; }
   .touch-actions { display:grid; grid-template-columns:repeat(2, 74px); gap:10px; }
   .touch-actions .action-btn { width:74px; height:74px; font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-  .touch-look { position:fixed; inset:0 0 0 0; z-index:15; }
+  .touch-look { position:fixed; inset:0 0 0 0; z-index:15; pointer-events:none; }
 </style>
 </head>
 <body>
@@ -170,6 +170,7 @@ function updateOrientation() {
   const showNotice = isTouchDevice && portrait;
   orientationNotice.style.display = showNotice ? 'flex' : 'none';
   touchControls.classList.toggle('visible', isTouchDevice && !portrait);
+  touchLook.style.pointerEvents = 'none';
   if (isTouchDevice && portrait && screen.orientation && screen.orientation.lock) {
     screen.orientation.lock('landscape').catch(() => {});
   }
@@ -334,8 +335,10 @@ function createCar(x,z) {
   const wheelMat = new THREE.MeshStandardMaterial({ color:0x111417, roughness:0.8 });
   const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.4, 16), wheelMat);
   wheel.rotation.z = Math.PI / 2;
-  wheel.position.set(-1.2, 0.55, 0.95); g.add(wheel); g.add(wheel.clone().translate(-1.2, 0.55, -0.95));
-  g.add(wheel.clone().translate(1.2, 0.55, 0.95)); g.add(wheel.clone().translate(1.2, 0.55, -0.95));
+  const wheelFl = wheel.clone(); wheelFl.position.set(-1.2, 0.55, 0.95); g.add(wheelFl);
+  const wheelBl = wheel.clone(); wheelBl.position.set(-1.2, 0.55, -0.95); g.add(wheelBl);
+  const wheelFr = wheel.clone(); wheelFr.position.set(1.2, 0.55, 0.95); g.add(wheelFr);
+  const wheelBr = wheel.clone(); wheelBr.position.set(1.2, 0.55, -0.95); g.add(wheelBr);
   g.position.set(x, 0, z);
   g.userData.enterPos = new THREE.Vector3(x, 1.6, z + 1.8);
   scene.add(g);
@@ -682,6 +685,7 @@ bindTouchButton(document.getElementById('touchReload'), () => { pressReload(); }
 touchLook.addEventListener('touchstart', e => {
   if(!isTouchDevice) return;
   touchMoveState.active = true;
+  touchLook.style.pointerEvents = 'auto';
   const t = e.touches[0];
   touchMoveState.lastX = t.clientX;
   touchMoveState.lastY = t.clientY;
@@ -699,7 +703,7 @@ touchLook.addEventListener('touchmove', e => {
   touchMoveState.lastY = t.clientY;
   e.preventDefault();
 }, { passive:false });
-touchLook.addEventListener('touchend', () => { touchMoveState.active = false; });
+touchLook.addEventListener('touchend', () => { touchMoveState.active = false; touchLook.style.pointerEvents = 'none'; });
 
 addEventListener('keydown', e => {
   keys[e.code] = true;

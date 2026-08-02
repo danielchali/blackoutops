@@ -49,10 +49,45 @@
   #scope .hint { position:absolute; left:50%; top:calc(50% + 19vh); transform:translateX(-50%); font-size:10px; letter-spacing:.18em; color:#7f8c99; }
   #scope .dot { position:absolute; left:50%; top:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px; background:#c9f24d; border-radius:50%; }
   #msg { position:absolute; left:50%; top:22%; transform:translateX(-50%); font-size:22px; letter-spacing:.2em; text-transform:uppercase; color:#c9f24d; opacity:0; transition:opacity .4s; text-shadow:0 2px 12px #000; }
+  .orientation-notice { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(3,5,8,0.92); z-index:30; padding:24px; }
+  .orientation-box { max-width:420px; width:100%; border:1px solid rgba(201,242,77,.3); background:rgba(10,14,18,.9); padding:24px; border-radius:18px; text-align:center; }
+  .orientation-box h2 { margin:0 0 10px; color:#c9f24d; font-size:24px; }
+  .orientation-box p { margin:0 0 16px; line-height:1.7; color:#9fb0bf; }
+  .orientation-box button { margin-top:0; }
+  .touch-controls { position:fixed; inset:auto 0 0 0; display:none; justify-content:space-between; align-items:flex-end; padding:18px; z-index:20; pointer-events:none; }
+  .touch-controls.visible { display:flex; }
+  .touch-controls button { pointer-events:auto; border:none; border-radius:999px; background:rgba(10,14,18,.75); color:#f5f7fb; border:1px solid rgba(201,242,77,.24); box-shadow:0 10px 30px rgba(0,0,0,.28); }
+  .touch-pad { display:grid; grid-template-columns:repeat(2, 56px); gap:10px; }
+  .touch-pad .move-btn { width:56px; height:56px; font-size:22px; }
+  .touch-actions { display:grid; grid-template-columns:repeat(2, 74px); gap:10px; }
+  .touch-actions .action-btn { width:74px; height:74px; font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+  .touch-look { position:fixed; inset:0 0 0 0; z-index:15; }
 </style>
 </head>
 <body>
 <div id="damage"></div>
+<div id="orientationNotice" class="orientation-notice">
+  <div class="orientation-box">
+    <h2>Rotate to Landscape</h2>
+    <p>For the best touch experience, rotate your device to landscape mode and tap continue.</p>
+    <button id="continuePortrait">Continue</button>
+  </div>
+</div>
+<div id="touchControls" class="touch-controls">
+  <div class="touch-pad">
+    <button class="touch-btn move-btn" data-key="KeyW">▲</button>
+    <button class="touch-btn move-btn" data-key="KeyD">▶</button>
+    <button class="touch-btn move-btn" data-key="KeyA">◀</button>
+    <button class="touch-btn move-btn" data-key="KeyS">▼</button>
+  </div>
+  <div class="touch-actions">
+    <button class="touch-btn action-btn" id="touchFire">Fire</button>
+    <button class="touch-btn action-btn" id="touchJump">Jump</button>
+    <button class="touch-btn action-btn" id="touchReload">Reload</button>
+    <button class="touch-btn action-btn" id="touchAim">Aim</button>
+  </div>
+</div>
+<div id="touchLook" class="touch-look"></div>
 <div id="scope"><div class="ring"></div><div class="cx"></div><div class="cy"></div><div class="dot"></div><div class="zoom" id="zoomlvl">4x</div><div class="hint">Scroll / Z to change zoom</div></div>
 <div id="hud">
   <div id="crosshair"></div>
@@ -108,7 +143,29 @@ renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.domElement.style.touchAction = 'none';
 document.body.appendChild(renderer.domElement);
+
+const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+const touchControls = document.getElementById('touchControls');
+const orientationNotice = document.getElementById('orientationNotice');
+const touchLook = document.getElementById('touchLook');
+
+function updateOrientation() {
+  const portrait = window.innerHeight >= window.innerWidth;
+  const showNotice = isTouchDevice && portrait;
+  orientationNotice.style.display = showNotice ? 'flex' : 'none';
+  touchControls.classList.toggle('visible', isTouchDevice && !portrait);
+  if (isTouchDevice && portrait && screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('landscape').catch(() => {});
+  }
+}
+updateOrientation();
+addEventListener('resize', updateOrientation);
+addEventListener('orientationchange', updateOrientation);
+document.getElementById('continuePortrait').addEventListener('click', () => {
+  orientationNotice.style.display = 'none';
+});
 
 addEventListener('resize', () => {
   camera.aspect = innerWidth/innerHeight; camera.updateProjectionMatrix();
@@ -447,7 +504,6 @@ function spawnEnemy(t){
   const lLowerArmMeshRef = lLowerArm.children[0];
   body.add(torso, chest, pelvis, neck, headPivot, lUpperLeg, rUpperLeg, lLowerLeg, rLowerLeg, lUpperArm, rUpperArm, lLowerArm, rLowerArm, gunG);
   g.add(body);
-  g.add(gunG);
   [torso,pelvis,neck,skull,helmet,lUpperLegMeshRef,lLowerLegMeshRef,rUpperLegMesh,rLowerLegMesh,lUpperArmMeshRef,lLowerArmMeshRef,rUpperArmMesh,rLowerArmMesh,lHand,rHand].forEach(m=>{ if(m) m.castShadow=true; });
 
   let a; do { a = Math.random()*Math.PI*2; } while(false);
@@ -508,6 +564,64 @@ function dmgFlash(){ $('damage').style.opacity=0.9; dmgT=0.25; }
 
 // ---------- input ----------
 const keys = {};
+const touchMoveState = { active:false, lastX:0, lastY:0 };
+
+function setKey(code, pressed) {
+  keys[code] = pressed;
+}
+
+function pressJump() {
+  if(player.onGround && !player.crouch && !dead){ player.vel.y = 6.2; player.onGround=false; }
+}
+
+function pressReload() {
+  reload();
+}
+
+function bindTouchButton(button, onDown, onUp) {
+  button.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive:false });
+  button.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive:false });
+  button.addEventListener('mousedown', () => onDown());
+  button.addEventListener('mouseup', () => onUp());
+  button.addEventListener('mouseleave', () => onUp());
+}
+
+for (const btn of document.querySelectorAll('.touch-btn[data-key]')) {
+  const code = btn.getAttribute('data-key');
+  btn.addEventListener('touchstart', e => { e.preventDefault(); setKey(code, true); }, { passive:false });
+  btn.addEventListener('touchend', e => { e.preventDefault(); setKey(code, false); }, { passive:false });
+  btn.addEventListener('mousedown', () => setKey(code, true));
+  btn.addEventListener('mouseup', () => setKey(code, false));
+  btn.addEventListener('mouseleave', () => setKey(code, false));
+}
+
+bindTouchButton(document.getElementById('touchFire'), () => { firing = true; }, () => { firing = false; });
+bindTouchButton(document.getElementById('touchAim'), () => { aiming = true; }, () => { aiming = false; });
+bindTouchButton(document.getElementById('touchJump'), () => { pressJump(); }, () => {});
+bindTouchButton(document.getElementById('touchReload'), () => { pressReload(); }, () => {});
+
+touchLook.addEventListener('touchstart', e => {
+  if(!isTouchDevice) return;
+  touchMoveState.active = true;
+  const t = e.touches[0];
+  touchMoveState.lastX = t.clientX;
+  touchMoveState.lastY = t.clientY;
+  e.preventDefault();
+}, { passive:false });
+touchLook.addEventListener('touchmove', e => {
+  if(!touchMoveState.active) return;
+  const t = e.touches[0];
+  const dx = t.clientX - touchMoveState.lastX;
+  const dy = t.clientY - touchMoveState.lastY;
+  player.yaw -= dx * 0.004;
+  player.pitch -= dy * 0.004;
+  player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
+  touchMoveState.lastX = t.clientX;
+  touchMoveState.lastY = t.clientY;
+  e.preventDefault();
+}, { passive:false });
+touchLook.addEventListener('touchend', () => { touchMoveState.active = false; });
+
 addEventListener('keydown', e => {
   keys[e.code] = true;
   if(e.code==='Digit1') swap(0);

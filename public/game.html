@@ -41,6 +41,10 @@
   button:hover { background:#dcff6a; }
   #scope { position:fixed; inset:0; opacity:0; transition:opacity .12s; pointer-events:none; z-index:5;
     background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 27%, rgba(0,0,0,.98) 30%); }
+  #aimIndicator { position:fixed; left:50%; top:50%; width:160px; height:160px; transform:translate(-50%,-50%); border:2px solid rgba(201,242,77,.85); border-radius:50%; opacity:0; transition:opacity .12s; pointer-events:none; z-index:4; box-shadow:0 0 0 1px rgba(0,0,0,.35) inset, 0 0 16px rgba(201,242,77,.18); }
+  #aimIndicator::before, #aimIndicator::after { content:""; position:absolute; left:50%; top:50%; background:rgba(201,242,77,.9); }
+  #aimIndicator::before { width:2px; height:100%; transform:translate(-50%,-50%); }
+  #aimIndicator::after { width:100%; height:2px; transform:translate(-50%,-50%); }
   #scope .ring { position:absolute; left:50%; top:50%; width:60vh; height:60vh; transform:translate(-50%,-50%); border:2px solid rgba(0,0,0,.9); border-radius:50%; box-shadow:0 0 0 2px rgba(201,242,77,.25) inset; }
   #scope .cx, #scope .cy { position:absolute; left:50%; top:50%; background:rgba(20,25,20,.9); }
   #scope .cx { width:60vh; height:1px; transform:translate(-50%,-50%); }
@@ -49,6 +53,8 @@
   #scope .hint { position:absolute; left:50%; top:calc(50% + 19vh); transform:translateX(-50%); font-size:10px; letter-spacing:.18em; color:#7f8c99; }
   #scope .dot { position:absolute; left:50%; top:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px; background:#c9f24d; border-radius:50%; }
   #msg { position:absolute; left:50%; top:22%; transform:translateX(-50%); font-size:22px; letter-spacing:.2em; text-transform:uppercase; color:#c9f24d; opacity:0; transition:opacity .4s; text-shadow:0 2px 12px #000; }
+  #missionPanel { left:24px; top:150px; min-width:300px; display:none; }
+  #missionPanel .big { font-size:20px; margin-top:4px; }
   .orientation-notice { position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(3,5,8,0.92); z-index:30; padding:24px; }
   .orientation-box { max-width:420px; width:100%; border:1px solid rgba(201,242,77,.3); background:rgba(10,14,18,.9); padding:24px; border-radius:18px; text-align:center; }
   .orientation-box h2 { margin:0 0 10px; color:#c9f24d; font-size:24px; }
@@ -89,6 +95,7 @@
 </div>
 <div id="touchLook" class="touch-look"></div>
 <div id="scope"><div class="ring"></div><div class="cx"></div><div class="cy"></div><div class="dot"></div><div class="zoom" id="zoomlvl">4x</div><div class="hint">Scroll / Z to change zoom</div></div>
+<div id="aimIndicator"></div>
 <div id="hud">
   <div id="crosshair"></div>
   <div id="hitmark"></div>
@@ -96,6 +103,11 @@
   <div class="panel" id="stats">
     <div class="label">Wave <span id="wave">1</span> · Kills <span id="kills">0</span></div>
     <div class="label" style="margin-top:4px">Enemies left <span id="left">0</span></div>
+  </div>
+  <div class="panel" id="missionPanel">
+    <div class="label">Story Mission</div>
+    <div class="big" id="missionTitle">Loading</div>
+    <div class="label" id="missionText" style="margin-top:8px; font-size:11px; line-height:1.6; text-transform:none; letter-spacing:.02em;">Preparing the campaign.</div>
   </div>
   <div class="panel" id="health">
     <div class="label">Armor / Health</div>
@@ -122,9 +134,11 @@
     <kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Ctrl</kbd> crouch · <kbd>Space</kbd> jump<br/>
     <kbd>Mouse</kbd> aim · <kbd>Click</kbd> fire · <kbd>Right-click</kbd> aim down sights · <kbd>Scroll</kbd> sniper zoom · <kbd>R</kbd> reload<br/>
     <kbd>1</kbd> pistol · <kbd>2</kbd> rifle · <kbd>3</kbd> shotgun · <kbd>4</kbd> knife · <kbd>5</kbd> sniper · <kbd>V</kbd> quick melee<br/>
-    Survive the waves. Clear the compound.
+    <kbd>G</kbd> grenade · <kbd>E</kbd> enter / interact · <kbd>F</kbd> exit vehicle<br/>
+    Choose story mode for a campaign or freeplay for endless waves.
   </p>
-  <button id="start">Deploy</button>
+  <button id="startStory">Story campaign</button>
+  <button id="startSurvival" style="margin-left:10px; background:#1f2530; color:#e8eef5;">Freeplay</button>
 </div></div>
 
 <script type="importmap">
@@ -186,6 +200,15 @@ scene.add(sun);
 const colliders = []; // {min:Vector3,max:Vector3} AABB in XZ
 const worldMeshes = []; // solid geometry that stops bullets
 const WORLD = 90;
+const storyState = { mode:'freeplay', mission:0, objectiveComplete:false, houseEntered:false, objectiveMarker:null, helicopterVisible:false, car:null, carDriver:false, grenadeCooldown:0, grenadeCount:5, helicopter:null, evac:false, munitionsCollected:false, rooftopHold:false, ambushCleared:false };
+const storyMissions = [
+  { title:'Operation: First Contact', text:'Reach the compound perimeter and eliminate the first wave of hostile patrols.', target:'gate' },
+  { title:'Operation: Safehouse Sweep', text:'Clear the safehouse, recover the intel, and secure the rear entrance.', target:'house' },
+  { title:'Operation: Heavy Contact', text:'Eliminate the reinforced squad and seize the munitions cache.', target:'munitions' },
+  { title:'Operation: Exfil', text:'Get into the armored vehicle and escape the district.', target:'car' },
+  { title:'Operation: Rooftop Hold', text:'Hold the rooftop against the counterattack until the helicopter arrives.', target:'heli' },
+  { title:'Operation: Final Extraction', text:'Board the chopper and complete the extraction.', target:'exfil' }
+];
 
 function box(w,h,dp,x,y,z,color,rough=0.9) {
   const m = new THREE.Mesh(
@@ -283,6 +306,55 @@ function createTree(x,z,scale=1) {
   return g;
 }
 
+function createHouse(x,z,width=12,depth=8,height=6) {
+  const g = new THREE.Group();
+  const shell = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), new THREE.MeshStandardMaterial({ color:0x7a5a3b, roughness:0.9 }));
+  shell.position.y = height / 2; shell.castShadow = true; shell.receiveShadow = true; g.add(shell);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(width + 0.5, 0.6, depth + 0.5), new THREE.MeshStandardMaterial({ color:0x2b2d31, roughness:0.95 }));
+  roof.position.y = height + 0.3; g.add(roof);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.2), new THREE.MeshStandardMaterial({ color:0x4b3220, roughness:0.95 }));
+  door.position.set(0, 1.1, depth / 2 + 0.11); g.add(door);
+  const floor = new THREE.Mesh(new THREE.BoxGeometry(width, 0.2, depth), new THREE.MeshStandardMaterial({ color:0x8f7d5d, roughness:0.95 }));
+  floor.position.y = 0.1; g.add(floor);
+  g.position.set(x, 0, z);
+  g.userData.doorPos = new THREE.Vector3(x, 1.7, z + depth / 2 + 1.2);
+  g.userData.insidePos = new THREE.Vector3(x + 0.8, 1.7, z + 1.2);
+  scene.add(g);
+  colliders.push(new THREE.Box3().setFromObject(g));
+  worldMeshes.push(shell);
+  return g;
+}
+
+function createCar(x,z) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.1, 1.7), new THREE.MeshStandardMaterial({ color:0x223346, roughness:0.7, metalness:0.4 }));
+  body.position.y = 1.1; body.castShadow = true; body.receiveShadow = true; g.add(body);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.1, 1.0, 1.4), new THREE.MeshStandardMaterial({ color:0x31485d, roughness:0.6, metalness:0.2 }));
+  roof.position.set(0, 1.7, 0); g.add(roof);
+  const wheelMat = new THREE.MeshStandardMaterial({ color:0x111417, roughness:0.8 });
+  const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 0.4, 16), wheelMat);
+  wheel.rotation.z = Math.PI / 2;
+  wheel.position.set(-1.2, 0.55, 0.95); g.add(wheel); g.add(wheel.clone().translate(-1.2, 0.55, -0.95));
+  g.add(wheel.clone().translate(1.2, 0.55, 0.95)); g.add(wheel.clone().translate(1.2, 0.55, -0.95));
+  g.position.set(x, 0, z);
+  g.userData.enterPos = new THREE.Vector3(x, 1.6, z + 1.8);
+  scene.add(g);
+  colliders.push(new THREE.Box3().setFromObject(g));
+  worldMeshes.push(body);
+  return g;
+}
+
+function createHelicopter(x,z) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(4.2, 0.8, 2.2), new THREE.MeshStandardMaterial({ color:0x11161b, roughness:0.8, metalness:0.6 }));
+  body.position.y = 2.2; g.add(body);
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.3, 0.6), new THREE.MeshStandardMaterial({ color:0x26313b, roughness:0.8 })); tail.position.set(-2.3, 2.4, 0); g.add(tail);
+  const rotor = new THREE.Mesh(new THREE.BoxGeometry(3.4, 0.1, 0.2), new THREE.MeshStandardMaterial({ color:0x7e8a95, roughness:0.6 })); rotor.position.set(0, 2.7, 0); g.add(rotor);
+  g.position.set(x, 0, z);
+  scene.add(g);
+  return g;
+}
+
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(WORLD*2, WORLD*2, 1, 1),
   new THREE.MeshStandardMaterial({ color:0x7d7a68, roughness:1 })
@@ -333,6 +405,13 @@ for (let i=0;i<12;i++) {
   createContainer(Math.cos(a)*r, Math.sin(a)*r, 0.8 + rnd()*0.4);
 }
 
+const storyHouse = createHouse(24, -18, 12, 8, 7);
+const storyCar = createCar(-24, 18);
+const storyHeli = createHelicopter(0, -42);
+storyHeli.visible = false;
+storyState.objectiveMarker = storyHeli;
+storyState.car = storyCar;
+
 // ---------- player ----------
 const player = {
   pos: new THREE.Vector3(0, 1.7, 20),
@@ -357,7 +436,7 @@ let zoomIdx = 0;
 // aim-down-sights tuning (default for non-sniper weapons)
 WEAPONS.forEach(w => {
   if(w.adsSpread === undefined) w.adsSpread = w.spread * (w.pellets>1 ? 0.6 : 0.28);
-  if(w.adsFov === undefined) w.adsFov = 55;
+  if(w.adsFov === undefined) w.adsFov = w.sniper ? 22 : 56;
 });
 WEAPONS.forEach(w => { w.inMag = w.mag; w.reserve = w.res; });
 let cur = 1, lastShot = 0, reloading = false, recoilKick = 0, swayT = 0;
@@ -632,6 +711,8 @@ addEventListener('keydown', e => {
   if(e.code==='KeyR') reload();
   if(e.code==='KeyZ' && WEAPONS[cur].sniper) setZoom((zoomIdx + 1) % SNIPER_ZOOMS.length);
   if(e.code==='KeyV') quickMelee();
+  if(e.code==='KeyG') throwGrenade();
+  if(e.code==='KeyE') interact();
   if(e.code==='ControlLeft' || e.code==='ControlRight' || e.code==='KeyC') player.crouch = true;
   if(e.code==='Space' && player.onGround && !player.crouch){ player.vel.y = 6.2; player.onGround=false; }
 });
@@ -652,8 +733,9 @@ addEventListener('mouseup',   e => {
 });
 addEventListener('mousemove', e => {
   if(document.pointerLockElement !== renderer.domElement) return;
-  const zoomMul = WEAPONS[cur].sniper ? (SNIPER_ZOOMS[zoomIdx].fov / 26) : 1;
-  const sens = 0.0022 * (1 - adsT * (WEAPONS[cur].sniper ? 1 - 0.28*zoomMul : 0.42));
+  const wA = WEAPONS[cur];
+  const zoomMul = wA.sniper ? (SNIPER_ZOOMS[zoomIdx].fov / 26) : 1;
+  const sens = 0.0022 * (1 - adsT * (wA.sniper ? 0.72 : 0.42)) * (aiming ? (wA.sniper ? 0.72 : 0.85) : 1);
   player.yaw   -= e.movementX * sens;
   player.pitch -= e.movementY * sens;
   player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
@@ -779,12 +861,58 @@ function killEnemy(e, hs){
   e.obj.traverse(o => { if(o.material){ o.material = o.material.clone(); o.material.transparent = true; } });
   e.fadeT = 3;
   if(hs) flash('Headshot');
-  // drop loot: the weapon they carried, or ammo for it
   const gi = e.name === 'Grunt' ? 1 : e.name === 'Heavy' ? 2 : 0;
   const roll = Math.random();
   if(roll < 0.25) spawnPickup(e.obj.position, 'weapon', gi);
   else if(roll < 0.8) spawnPickup(e.obj.position, 'ammo', gi);
   hud();
+}
+
+function throwGrenade(){
+  if(storyState.grenadeCount <= 0 || dead) return;
+  storyState.grenadeCount--;
+  const g = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 10), new THREE.MeshStandardMaterial({ color:0x4c5a61, roughness:0.9 }));
+  g.position.copy(camera.getWorldPosition(new THREE.Vector3()));
+  const dir = new THREE.Vector3(); camera.getWorldDirection(dir); dir.multiplyScalar(18).add(new THREE.Vector3(0, 2.2, 0));
+  g.userData.velocity = dir;
+  scene.add(g);
+  const grenade = { obj:g, life:3.5, kind:'grenade' };
+  pickups.push(grenade);
+  flash('Grenade thrown');
+}
+
+function explodeGrenade(grenade){
+  const pos = grenade.obj.position;
+  const burst = new THREE.Mesh(new THREE.SphereGeometry(0.8, 10, 10), new THREE.MeshBasicMaterial({ color:0xffb347, transparent:true, opacity:0.6 }));
+  burst.position.copy(pos); scene.add(burst); decals.push({ o:burst, t:0.18 });
+  for(const e of enemies){
+    if(e.dead) continue;
+    if(e.obj.position.distanceTo(pos) < 6){ e.hp -= 70; if(e.hp <= 0) killEnemy(e, false); }
+  }
+  if(player.pos.distanceTo(pos) < 6){ player.hp = Math.max(0, player.hp - 35); player.regenT = 3; dmgFlash(); }
+  hud();
+}
+
+function interact(){
+  const houseDist = storyHouse.position.distanceTo(new THREE.Vector3(player.pos.x, 0, player.pos.z));
+  if(storyState.mode === 'story' && storyState.mission === 1 && houseDist < 5 && !storyState.houseEntered){
+    storyState.houseEntered = true;
+    player.pos.copy(storyHouse.userData.insidePos);
+    flash('Safehouse entered');
+    return;
+  }
+  const carDist = storyCar.position.distanceTo(new THREE.Vector3(player.pos.x, 0, player.pos.z));
+  if(storyState.mode === 'story' && storyState.mission === 2 && carDist < 4 && !storyState.carDriver){
+    storyState.carDriver = true;
+    player.pos.copy(storyCar.userData.enterPos);
+    flash('Vehicle engaged');
+    return;
+  }
+  if(storyState.carDriver){
+    storyState.carDriver = false;
+    player.pos.set(storyCar.position.x, 1.7, storyCar.position.z + 3.4);
+    flash('Vehicle exited');
+  }
 }
 
 function tryFire(dt){
@@ -826,6 +954,38 @@ function loop(){
   renderer.render(scene, camera);
 }
 loop();
+
+function updateMission(dt){
+  if(storyState.mode !== 'story') return;
+  const mission = storyMissions[storyState.mission];
+  if(!mission) return;
+  $('missionPanel').style.display = 'block';
+  $('missionTitle').textContent = mission.title;
+  $('missionText').textContent = mission.text;
+  if(mission.target === 'gate' && kills >= 8){
+    storyState.objectiveComplete = true; storyState.mission++; flash('Objective complete');
+  }
+  if(mission.target === 'house' && storyState.houseEntered){
+    storyState.objectiveComplete = true; storyState.mission++; flash('Safehouse secured');
+  }
+  if(mission.target === 'munitions' && storyState.munitionsCollected){
+    storyState.objectiveComplete = true; storyState.mission++; flash('Munitions secured');
+  }
+  if(mission.target === 'car' && storyState.carDriver){
+    storyState.objectiveComplete = true; storyState.mission++; flash('Vehicle secured');
+  }
+  if(mission.target === 'heli' && storyState.rooftopHold){
+    storyState.objectiveComplete = true; storyState.mission++; flash('Rooftop held');
+  }
+  if(mission.target === 'exfil' && storyState.evac){
+    storyState.objectiveComplete = true; storyState.mission++; flash('Extraction complete');
+  }
+  if(storyState.mission >= storyMissions.length){
+    storyState.mode = 'completed';
+    $('missionTitle').textContent = 'Campaign complete';
+    $('missionText').textContent = 'The district is clear and the squad is extracted.';
+  }
+}
 
 function update(dt){
   // camera orientation
@@ -881,15 +1041,16 @@ function update(dt){
   // aim down sights
   const wA = WEAPONS[cur];
   if(wA.melee || dead || reloading) aiming = false;
-  const adsTarget = aiming ? 1 : 0;
-  adsT += (adsTarget - adsT) * (1 - Math.pow(0.00002, dt));
-  if(Math.abs(adsT - adsTarget) < 0.005) adsT = adsTarget;
+  const adsTarget = aiming && !wA.melee && !dead && !reloading ? 1 : 0;
+  adsT += (adsTarget - adsT) * (wA.sniper ? 0.14 : 0.2);
+  if(Math.abs(adsT - adsTarget) < 0.01) adsT = adsTarget;
   const targetAdsFov = wA.sniper ? SNIPER_ZOOMS[zoomIdx].fov : wA.adsFov;
   const wantFov = 75 + (targetAdsFov - 75) * adsT;
   if(Math.abs(camera.fov - wantFov) > 0.01){ camera.fov = wantFov; camera.updateProjectionMatrix(); }
   const scoped = wA.sniper && adsT > 0.86;
   if(scoped) $('scope').style.setProperty('--mag', String(zoomIdx));
   $('scope').style.opacity = scoped ? 1 : 0;
+  $('aimIndicator').style.opacity = (!wA.sniper && adsT > 0.4) ? 1 : 0;
   $('crosshair').style.opacity = (scoped || adsT > 0.5) ? 0 : 1;
 
   // viewmodel sway / melee anim
@@ -897,16 +1058,16 @@ function update(dt){
   gunMeshes[cur].visible = !scoped;
   const idle = Math.sin(now()/1000*2)*0.006;
   function now(){ return performance.now(); }
-  const swayMul = 1 - adsT*0.85;
-  const hipX = 0.30, adsX = 0.0;
-  const hipY = -0.26, adsY = wA.sniper ? -0.135 : -0.15;
-  const hipZ = -0.85, adsZ = wA.sniper ? -0.62 : -0.66;
+  const swayMul = 1 - adsT*0.82;
+  const hipX = 0.30, adsX = 0.03;
+  const hipY = -0.26, adsY = wA.sniper ? -0.135 : -0.12;
+  const hipZ = -0.85, adsZ = wA.sniper ? -0.62 : -0.56;
   g.position.set(
     hipX + (adsX - hipX)*adsT,
-    (hipY + (adsY - hipY)*adsT) + (Math.sin(bob)*0.012 + idle)*swayMul,
-    (hipZ + (adsZ - hipZ)*adsT) + recoilKick*2.2
+    (hipY + (adsY - hipY)*adsT) + (Math.sin(bob)*0.008 + idle)*swayMul,
+    (hipZ + (adsZ - hipZ)*adsT) + recoilKick*1.9
   );
-  g.rotation.set(-recoilKick*3 + (meleeAnim>0 ? -Math.sin((0.36-meleeAnim)/0.36*Math.PI)*1.1 : 0), swayT*1.2*swayMul, meleeAnim>0 ? Math.sin((0.36-meleeAnim)/0.36*Math.PI)*0.5 : 0);
+  g.rotation.set(-recoilKick*2.3 + (meleeAnim>0 ? -Math.sin((0.36-meleeAnim)/0.36*Math.PI)*1.1 : 0), swayT*0.95*swayMul, meleeAnim>0 ? Math.sin((0.36-meleeAnim)/0.36*Math.PI)*0.5 : 0);
   if(meleeAnim>0) meleeAnim = Math.max(0, meleeAnim-dt);
   swayT = Math.max(0, swayT-dt);
 
@@ -962,6 +1123,14 @@ function update(dt){
   // pickups
   for(let i=pickups.length-1;i>=0;i--){
     const p = pickups[i];
+    if(p.kind === 'grenade'){
+      p.life -= dt;
+      p.obj.position.addScaledVector(p.obj.userData.velocity, dt);
+      p.obj.userData.velocity.y -= 9 * dt;
+      p.obj.rotation.y += dt*2.4;
+      if(p.life <= 0){ explodeGrenade(p); pickups.splice(i,1); continue; }
+      continue;
+    }
     p.t -= dt; p.bob += dt*2.5;
     p.obj.rotation.y += dt*1.6;
     p.obj.position.y = 0.62 + Math.sin(p.bob)*0.09;
@@ -972,6 +1141,38 @@ function update(dt){
   }
 
 
+  if(storyState.mode === 'story' && storyState.mission === 0 && !storyState.objectiveComplete){
+    const gateDist = Math.hypot(player.pos.x - 0, player.pos.z - 0);
+    if(gateDist < 16) flash('Advance to the compound');
+  }
+  if(storyState.mode === 'story' && storyState.mission === 1 && !storyState.houseEntered){
+    const houseDist = Math.hypot(player.pos.x - storyHouse.position.x, player.pos.z - storyHouse.position.z);
+    if(houseDist < 10) {
+      storyState.houseEntered = true;
+      storyState.munitionsCollected = true;
+      flash('Intel recovered');
+    }
+  }
+  if(storyState.mode === 'story' && storyState.mission === 2 && !storyState.munitionsCollected){
+    if(kills >= 14){ storyState.munitionsCollected = true; flash('Cache secured'); }
+  }
+  if(storyState.mode === 'story' && storyState.mission === 3 && !storyState.carDriver){
+    const carDist = Math.hypot(player.pos.x - storyCar.position.x, player.pos.z - storyCar.position.z);
+    if(carDist < 4) {
+      flash('Press E to enter the vehicle');
+    }
+  }
+  if(storyState.mode === 'story' && storyState.mission === 4 && !storyState.rooftopHold){
+    storyState.rooftopHold = true;
+    storyState.helicopterVisible = true;
+    storyHeli.visible = true;
+    flash('Rooftop secured');
+  }
+  if(storyState.mode === 'story' && storyState.mission === 5 && !storyState.evac){
+    storyState.evac = true;
+    flash('Extraction confirmed');
+  }
+
   // wave progression
   if(alive===0 && !spawning && !dead){
     spawning = true;
@@ -979,6 +1180,26 @@ function update(dt){
       player.hp = Math.min(100, player.hp+25); startWave(); spawning=false; hud(); }, 2600);
     if(wave>0) flash('Sector clear — resupply incoming');
   }
+
+  // grenades / mission updates
+  storyState.grenadeCooldown = Math.max(0, storyState.grenadeCooldown - dt);
+  if(storyState.carDriver){
+    const move = new THREE.Vector3();
+    if(keys['KeyW']) move.z -= 1;
+    if(keys['KeyS']) move.z += 1;
+    if(keys['KeyD']) move.x += 1;
+    if(keys['KeyA']) move.x -= 1;
+    if(move.lengthSq() > 0){ move.normalize().multiplyScalar(14 * dt); storyCar.position.add(move); }
+    player.pos.set(storyCar.position.x, 1.6, storyCar.position.z + 2.6);
+    if(keys['KeyF']) interact();
+  }
+  if(storyState.mode === 'story' && storyState.mission === 3 && storyState.helicopterVisible){
+    storyHeli.rotation.y += dt * 0.6;
+    storyHeli.children[2].rotation.z += dt * 12;
+    storyHeli.position.x = Math.sin(performance.now() * 0.0003) * 8;
+    storyHeli.position.z = -42 + Math.cos(performance.now() * 0.0002) * 4;
+  }
+  updateMission(dt);
 
   // fx cleanup
   for(let i=decals.length-1;i>=0;i--){
@@ -1070,7 +1291,14 @@ function drawMap(){
 }
 
 // ---------- start ----------
-$('start').addEventListener('click', () => {
+$('startStory').addEventListener('click', () => {
+  storyState.mode = 'story';
+  $('overlay').style.display = 'none';
+  renderer.domElement.requestPointerLock();
+  if(!started){ started = true; startWave(); hud(); }
+});
+$('startSurvival').addEventListener('click', () => {
+  storyState.mode = 'freeplay';
   $('overlay').style.display = 'none';
   renderer.domElement.requestPointerLock();
   if(!started){ started = true; startWave(); hud(); }

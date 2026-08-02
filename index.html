@@ -5,19 +5,45 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Blackout Ops is a browser-based first-person shooter with guns, melee, enemies, and a 3D world." />
     <title>Blackout Ops</title>
+    <link rel="icon" href="./public/favicon.ico" type="image/x-icon" sizes="any" />
+    <link rel="shortcut icon" href="./public/favicon.ico" type="image/x-icon" />
+    <link rel="apple-touch-icon" href="./public/logo.png" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <main class="hero">
       <section class="hero-card">
-        <p class="eyebrow">Vanilla static build</p>
-        <h1>Blackout Ops</h1>
-        <p class="lead">
-          A browser-first FPS with pistols, rifles, shotguns, a combat knife, and waves of enemies in a fully 3D environment.
-        </p>
-        <div class="actions">
-          <a class="button primary" href="./game.html">Launch game</a>
-          <a class="button secondary" href="https://github.com" target="_blank" rel="noreferrer">View source</a>
+        <div class="brand-row">
+          <img class="brand-logo" src="./public/logo.png" alt="Blackout Ops logo" />
+          <div class="brand-badge">Static browser FPS</div>
+        </div>
+
+        <div class="hero-copy">
+          <p class="eyebrow">Mission briefing</p>
+          <h1>Blackout Ops</h1>
+          <p class="lead">
+            Drop into a gritty 3D arena packed with hostile forces, smart wave pressure, and fast-fire combat from your browser.
+          </p>
+
+          <div class="actions">
+            <a class="button primary" href="./public/game.html">Launch game</a>
+            <a class="button secondary" href="https://github.com" target="_blank" rel="noreferrer">View source</a>
+          </div>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card">
+            <h2>Wave-based combat</h2>
+            <p>Fight through escalating threats with increasing pressure and tougher enemies.</p>
+          </article>
+          <article class="feature-card">
+            <h2>Full 3D arena</h2>
+            <p>Traverse a detailed environment with props, cover, and combat-ready geometry.</p>
+          </article>
+          <article class="feature-card">
+            <h2>Touch & desktop ready</h2>
+            <p>Play with mouse and keyboard or jump straight into mobile-friendly controls.</p>
+          </article>
         </div>
       </section>
     </main>

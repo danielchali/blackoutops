@@ -9,7 +9,10 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at top, #182132 0%, #06070a 50%, #030405 100%);
+  background:
+    radial-gradient(circle at top left, rgba(201, 242, 77, 0.16), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(51, 95, 255, 0.2), transparent 32%),
+    linear-gradient(135deg, #06070a 0%, #111722 45%, #06070a 100%);
 }
 
 a { color: inherit; text-decoration: none; }
@@ -22,14 +25,41 @@ a { color: inherit; text-decoration: none; }
 }
 
 .hero-card {
-  max-width: 720px;
+  max-width: 980px;
   width: 100%;
-  padding: 2.5rem;
-  border: 1px solid rgba(201, 242, 77, 0.25);
-  border-radius: 24px;
-  background: rgba(8, 11, 15, 0.8);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(12px);
+  padding: 2.2rem;
+  border: 1px solid rgba(201, 242, 77, 0.22);
+  border-radius: 28px;
+  background: linear-gradient(145deg, rgba(10, 13, 20, 0.95), rgba(6, 9, 14, 0.82));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.4rem;
+}
+
+.brand-logo {
+  width: 78px;
+  height: 78px;
+  border-radius: 20px;
+  object-fit: cover;
+  border: 1px solid rgba(201, 242, 77, 0.24);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+}
+
+.brand-badge {
+  padding: 0.6rem 0.9rem;
+  border-radius: 999px;
+  background: rgba(201, 242, 77, 0.12);
+  color: #c9f24d;
+  font-size: 0.8rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .eyebrow {
@@ -42,12 +72,14 @@ a { color: inherit; text-decoration: none; }
 
 h1 {
   margin: 0;
-  font-size: clamp(2.4rem, 5vw, 4rem);
+  font-size: clamp(2.6rem, 5vw, 4.2rem);
   line-height: 1.05;
+  letter-spacing: -0.03em;
 }
 
 .lead {
   margin: 1rem 0 0;
+  max-width: 700px;
   font-size: 1.05rem;
   line-height: 1.8;
   color: #aebdca;
@@ -65,21 +97,56 @@ h1 {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  padding: 0.9rem 1.25rem;
+  padding: 0.95rem 1.35rem;
   font-weight: 700;
-  transition: transform 0.2s ease, background 0.2s ease;
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 .button:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .button.primary {
-  background: #c9f24d;
+  background: linear-gradient(90deg, #dfff75, #c9f24d);
   color: #06070a;
+  box-shadow: 0 10px 20px rgba(201, 242, 77, 0.2);
 }
 
 .button.secondary {
   border: 1px solid rgba(201, 242, 77, 0.3);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.feature-card {
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(255, 255, 255, 0.04);
+}
+
+.feature-card h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  color: #f7fbff;
+}
+
+.feature-card p {
+  margin: 0;
+  color: #90a3b3;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 760px) {
+  .hero { padding: 1rem; }
+  .hero-card { padding: 1.2rem; }
+  .brand-row { flex-direction: column; align-items: flex-start; }
+  .feature-grid { grid-template-columns: 1fr; }
 }

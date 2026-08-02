@@ -159,6 +159,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.domElement.style.touchAction = 'none';
 document.body.appendChild(renderer.domElement);
+window.__scene = scene;
 
 const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 const touchControls = document.getElementById('touchControls');
@@ -203,12 +204,12 @@ const worldMeshes = []; // solid geometry that stops bullets
 const WORLD = 90;
 const storyState = { mode:'freeplay', mission:0, objectiveComplete:false, houseEntered:false, objectiveMarker:null, helicopterVisible:false, car:null, carDriver:false, grenadeCooldown:0, grenadeCount:5, helicopter:null, evac:false, munitionsCollected:false, rooftopHold:false, ambushCleared:false, encounterActive:false, encounterCleared:true };
 const storyMissions = [
-  { title:'Operation: First Contact', text:'Reach the compound perimeter and eliminate the first wave of hostile patrols.', target:'gate' },
-  { title:'Operation: Safehouse Sweep', text:'Clear the safehouse, recover the intel, and secure the rear entrance.', target:'house' },
-  { title:'Operation: Heavy Contact', text:'Eliminate the reinforced squad and seize the munitions cache.', target:'munitions' },
-  { title:'Operation: Exfil', text:'Get into the armored vehicle and escape the district.', target:'car' },
+  { title:'Operation: City Perimeter', text:'Push through the city perimeter and clear the first hostile patrols.', target:'gate' },
+  { title:'Operation: Dustbound Safehouse', text:'Secure the safehouse in the desert outskirts, recover the intel, and hold the rear entrance.', target:'house' },
+  { title:'Operation: Village Raid', text:'Strike through the village lanes and seize the munitions cache before it is moved.', target:'munitions' },
+  { title:'Operation: Town Escape', text:'Use the armored vehicle to break out through the town and escape the district.', target:'car' },
   { title:'Operation: Rooftop Hold', text:'Hold the rooftop against the counterattack until the helicopter arrives.', target:'heli' },
-  { title:'Operation: Final Extraction', text:'Board the chopper and complete the extraction.', target:'exfil' }
+  { title:'Operation: Final Extraction', text:'Board the chopper and complete the extraction over the desert flats.', target:'exfil' }
 ];
 
 function box(w,h,dp,x,y,z,color,rough=0.9) {
@@ -358,6 +359,102 @@ function createHelicopter(x,z) {
   return g;
 }
 
+function createRoad(x,z, width=18, depth=8, rot=0) {
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(width, depth), new THREE.MeshStandardMaterial({ color:0x3e4248, roughness:1 }));
+  road.rotation.x = -Math.PI / 2;
+  road.position.set(x, 0.01, z);
+  road.rotation.z = rot;
+  road.receiveShadow = true;
+  scene.add(road);
+  return road;
+}
+
+function createDesertZone(x,z) {
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), new THREE.MeshStandardMaterial({ color:0xc7ab68, roughness:1 }));
+  base.rotation.x = -Math.PI / 2;
+  base.position.set(x, 0.01, z);
+  base.receiveShadow = true;
+  base.userData.zone = 'desert';
+  scene.add(base);
+
+  for (let i = 0; i < 6; i++) {
+    const dune = new THREE.Mesh(new THREE.CylinderGeometry(1.8 + i * 0.3, 2.6 + i * 0.25, 1.2, 8), new THREE.MeshStandardMaterial({ color:0xb18d49, roughness:1 }));
+    dune.position.set(x + (i - 2.5) * 1.8 + (Math.random() - 0.5) * 2, 0.6, z + (Math.random() - 0.5) * 10);
+    dune.rotation.y = Math.random() * Math.PI;
+    dune.receiveShadow = true; dune.castShadow = true; dune.userData.zone = 'desert';
+    scene.add(dune);
+  }
+  for (let i = 0; i < 8; i++) {
+    const cactus = new THREE.Group();
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 1.1, 8), new THREE.MeshStandardMaterial({ color:0x3c7d3f, roughness:0.95 }));
+    stem.position.y = 0.55; stem.castShadow = true;
+    const armA = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.11, 0.7, 8), new THREE.MeshStandardMaterial({ color:0x3c7d3f, roughness:0.95 }));
+    armA.position.set(0.35, 0.65, 0); armA.rotation.z = Math.PI / 5; armA.castShadow = true;
+    const armB = armA.clone(); armB.position.set(-0.35, 0.65, 0); armB.rotation.z = -Math.PI / 5;
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.24, 0.35, 8), new THREE.MeshStandardMaterial({ color:0x7a4f2b, roughness:0.95 }));
+    pot.position.y = 0.17; pot.castShadow = true;
+    cactus.add(stem, armA, armB, pot);
+    cactus.position.set(x + (Math.random() - 0.5) * 22, 0, z + (Math.random() - 0.5) * 22);
+    cactus.userData.zone = 'desert';
+    scene.add(cactus);
+  }
+  const hut = new THREE.Group();
+  const hutWall = new THREE.Mesh(new THREE.BoxGeometry(4.2, 2.4, 3.4), new THREE.MeshStandardMaterial({ color:0xa98754, roughness:0.95 }));
+  hutWall.position.y = 1.2; hutWall.castShadow = true; hutWall.receiveShadow = true;
+  const hutRoof = new THREE.Mesh(new THREE.ConeGeometry(3.2, 2.4, 4), new THREE.MeshStandardMaterial({ color:0x5b4730, roughness:0.9 }));
+  hutRoof.position.y = 2.8; hutRoof.castShadow = true;
+  hut.add(hutWall, hutRoof); hut.position.set(x + 8, 0, z - 8); hut.userData.zone = 'desert'; scene.add(hut);
+  return base;
+}
+
+function createVillageZone(x,z) {
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(44, 44), new THREE.MeshStandardMaterial({ color:0x6f8b4e, roughness:1 }));
+  base.rotation.x = -Math.PI / 2;
+  base.position.set(x, 0.01, z);
+  base.receiveShadow = true; base.userData.zone = 'village'; scene.add(base);
+  createRoad(x, z - 6, 26, 10);
+  for (let i = 0; i < 5; i++) {
+    const house = new THREE.Group();
+    const walls = new THREE.Mesh(new THREE.BoxGeometry(3.6, 2.4, 3.1), new THREE.MeshStandardMaterial({ color:0x8c6a3f, roughness:0.95 }));
+    walls.position.y = 1.2; walls.castShadow = true; walls.receiveShadow = true;
+    const roof = new THREE.Mesh(new THREE.CylinderGeometry(2.2, 2.2, 3.2, 4), new THREE.MeshStandardMaterial({ color:0x4f5338, roughness:0.9 }));
+    roof.rotation.y = Math.PI / 4; roof.position.y = 2.4; roof.castShadow = true;
+    house.add(walls, roof);
+    house.position.set(x + (i - 2) * 6, 0, z + (i % 2 ? 8 : -6));
+    house.userData.zone = 'village'; scene.add(house);
+  }
+  for (let i = 0; i < 8; i++) {
+    const fence = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.8, 2.4), new THREE.MeshStandardMaterial({ color:0x6a5239, roughness:0.95 }));
+    fence.position.set(x - 12 + i * 3.4, 0.4, z + 12); fence.castShadow = true; fence.userData.zone = 'village'; scene.add(fence);
+  }
+  return base;
+}
+
+function createTownZone(x,z) {
+  const base = new THREE.Mesh(new THREE.PlaneGeometry(44, 44), new THREE.MeshStandardMaterial({ color:0x8a8f67, roughness:1 }));
+  base.rotation.x = -Math.PI / 2;
+  base.position.set(x, 0.01, z);
+  base.receiveShadow = true; base.userData.zone = 'town'; scene.add(base);
+  createRoad(x, z + 6, 30, 10);
+  for (let i = 0; i < 6; i++) {
+    const house = new THREE.Group();
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(4.3, 3.2, 3.8), new THREE.MeshStandardMaterial({ color:i % 2 ? 0x5e6770 : 0x7c6a4f, roughness:0.9 }));
+    shell.position.y = 1.6; shell.castShadow = true; shell.receiveShadow = true;
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(4.8, 0.45, 4.3), new THREE.MeshStandardMaterial({ color:0x2f3136, roughness:0.95 }));
+    roof.position.y = 3.3; roof.castShadow = true;
+    house.add(shell, roof);
+    house.position.set(x + (i - 2.5) * 5.2, 0, z + (i % 2 ? 8 : -8));
+    house.userData.zone = 'town'; scene.add(house);
+  }
+  const tower = new THREE.Group();
+  const towerCore = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 1.1, 3.4, 10), new THREE.MeshStandardMaterial({ color:0x5e6369, roughness:0.9 }));
+  towerCore.position.y = 1.7; towerCore.castShadow = true;
+  const towerTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.55, 1.6), new THREE.MeshStandardMaterial({ color:0xb5b5b5, roughness:0.7 }));
+  towerTop.position.y = 3.4; towerTop.castShadow = true;
+  tower.add(towerCore, towerTop); tower.position.set(x + 10, 0, z - 10); tower.userData.zone = 'town'; scene.add(tower);
+  return base;
+}
+
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(WORLD*2, WORLD*2, 1, 1),
   new THREE.MeshStandardMaterial({ color:0x7d7a68, roughness:1 })
@@ -407,6 +504,10 @@ for (let i=0;i<12;i++) {
   const r = 16 + rnd()*30;
   createContainer(Math.cos(a)*r, Math.sin(a)*r, 0.8 + rnd()*0.4);
 }
+
+createDesertZone(72, 70);
+createVillageZone(-74, 72);
+createTownZone(74, -74);
 
 const storyHouse = createHouse(24, -18, 12, 8, 7);
 const storyCar = createCar(-24, 18);

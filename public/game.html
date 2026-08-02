@@ -201,7 +201,7 @@ scene.add(sun);
 const colliders = []; // {min:Vector3,max:Vector3} AABB in XZ
 const worldMeshes = []; // solid geometry that stops bullets
 const WORLD = 90;
-const storyState = { mode:'freeplay', mission:0, objectiveComplete:false, houseEntered:false, objectiveMarker:null, helicopterVisible:false, car:null, carDriver:false, grenadeCooldown:0, grenadeCount:5, helicopter:null, evac:false, munitionsCollected:false, rooftopHold:false, ambushCleared:false };
+const storyState = { mode:'freeplay', mission:0, objectiveComplete:false, houseEntered:false, objectiveMarker:null, helicopterVisible:false, car:null, carDriver:false, grenadeCooldown:0, grenadeCount:5, helicopter:null, evac:false, munitionsCollected:false, rooftopHold:false, ambushCleared:false, encounterActive:false, encounterCleared:true };
 const storyMissions = [
   { title:'Operation: First Contact', text:'Reach the compound perimeter and eliminate the first wave of hostile patrols.', target:'gate' },
   { title:'Operation: Safehouse Sweep', text:'Clear the safehouse, recover the intel, and secure the rear entrance.', target:'house' },
@@ -608,6 +608,60 @@ function startWave(){
   flash('Wave ' + wave + ' — ' + n + ' hostiles');
 }
 
+function startStoryEncounter(){
+  if(storyState.mode !== 'story') return;
+  storyState.encounterActive = true;
+  storyState.encounterCleared = false;
+
+  switch(storyState.mission){
+    case 0:
+      for(let i=0;i<8;i++) spawnEnemy(i % 3 === 0 ? 1 : 0);
+      flash('Secure the perimeter');
+      break;
+    case 2:
+      for(let i=0;i<10;i++) spawnEnemy(i % 4 === 0 ? 1 : Math.random() > 0.7 ? 2 : 0);
+      flash('Eliminate the munitions squad');
+      break;
+    case 4:
+      for(let i=0;i<7;i++) spawnEnemy(i % 3 === 0 ? 1 : 2);
+      flash('Hold the rooftop');
+      break;
+    default:
+      storyState.encounterActive = false;
+      storyState.encounterCleared = true;
+      return;
+  }
+}
+
+function startStoryMode(){
+  wave = 1; kills = 0; spawning = false;
+  storyState.mission = 0;
+  storyState.objectiveComplete = false;
+  storyState.houseEntered = false;
+  storyState.munitionsCollected = false;
+  storyState.carDriver = false;
+  storyState.rooftopHold = false;
+  storyState.evac = false;
+  storyState.helicopterVisible = false;
+  storyState.encounterActive = false;
+  storyState.encounterCleared = true;
+  storyHeli.visible = false;
+  flash('Operation: First Contact');
+  setTimeout(startStoryEncounter, 700);
+  hud();
+}
+
+function advanceStoryMission(message){
+  storyState.objectiveComplete = true;
+  storyState.mission++;
+  storyState.encounterActive = false;
+  storyState.encounterCleared = true;
+  flash(message);
+  if(storyState.mode === 'story' && storyState.mission < storyMissions.length){
+    setTimeout(startStoryEncounter, 1200);
+  }
+}
+
 // ---------- fx ----------
 const decals = [];
 function tracer(a,b){
@@ -966,23 +1020,23 @@ function updateMission(dt){
   $('missionPanel').style.display = 'block';
   $('missionTitle').textContent = mission.title;
   $('missionText').textContent = mission.text;
-  if(mission.target === 'gate' && kills >= 8){
-    storyState.objectiveComplete = true; storyState.mission++; flash('Objective complete');
+  if(mission.target === 'gate' && storyState.encounterCleared && storyState.encounterActive === false){
+    advanceStoryMission('Objective complete');
   }
   if(mission.target === 'house' && storyState.houseEntered){
-    storyState.objectiveComplete = true; storyState.mission++; flash('Safehouse secured');
+    advanceStoryMission('Safehouse secured');
   }
-  if(mission.target === 'munitions' && storyState.munitionsCollected){
-    storyState.objectiveComplete = true; storyState.mission++; flash('Munitions secured');
+  if(mission.target === 'munitions' && storyState.munitionsCollected && storyState.encounterCleared && storyState.encounterActive === false){
+    advanceStoryMission('Munitions secured');
   }
   if(mission.target === 'car' && storyState.carDriver){
-    storyState.objectiveComplete = true; storyState.mission++; flash('Vehicle secured');
+    advanceStoryMission('Vehicle secured');
   }
-  if(mission.target === 'heli' && storyState.rooftopHold){
-    storyState.objectiveComplete = true; storyState.mission++; flash('Rooftop held');
+  if(mission.target === 'heli' && storyState.rooftopHold && storyState.encounterCleared && storyState.encounterActive === false){
+    advanceStoryMission('Rooftop held');
   }
   if(mission.target === 'exfil' && storyState.evac){
-    storyState.objectiveComplete = true; storyState.mission++; flash('Extraction complete');
+    advanceStoryMission('Extraction complete');
   }
   if(storyState.mission >= storyMissions.length){
     storyState.mode = 'completed';
@@ -1178,7 +1232,13 @@ function update(dt){
   }
 
   // wave progression
-  if(alive===0 && !spawning && !dead){
+  if(storyState.mode === 'story'){
+    if(storyState.encounterActive && alive===0 && !dead){
+      storyState.encounterActive = false;
+      storyState.encounterCleared = true;
+      flash('Objective cleared');
+    }
+  } else if(alive===0 && !spawning && !dead){
     spawning = true;
     setTimeout(()=>{ wave++; WEAPONS.forEach(w=>{ if(!w.melee) w.reserve = Math.min(w.res, w.reserve + Math.ceil(w.res*0.4)); });
       player.hp = Math.min(100, player.hp+25); startWave(); spawning=false; hud(); }, 2600);
@@ -1299,7 +1359,7 @@ $('startStory').addEventListener('click', () => {
   storyState.mode = 'story';
   $('overlay').style.display = 'none';
   renderer.domElement.requestPointerLock();
-  if(!started){ started = true; startWave(); hud(); }
+  if(!started){ started = true; startStoryMode(); }
 });
 $('startSurvival').addEventListener('click', () => {
   storyState.mode = 'freeplay';

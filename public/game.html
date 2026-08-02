@@ -42,13 +42,15 @@
   #scope .cx, #scope .cy { position:absolute; left:50%; top:50%; background:rgba(20,25,20,.9); }
   #scope .cx { width:60vh; height:1px; transform:translate(-50%,-50%); }
   #scope .cy { height:60vh; width:1px; transform:translate(-50%,-50%); }
+  #scope .zoom { position:absolute; left:50%; top:calc(50% + 20vh); transform:translateX(-50%); font-size:14px; letter-spacing:.22em; color:#c9f24d; text-shadow:0 0 8px #000; }
+  #scope .hint { position:absolute; left:50%; top:calc(50% + 24vh); transform:translateX(-50%); font-size:10px; letter-spacing:.18em; color:#7f8c99; }
   #scope .dot { position:absolute; left:50%; top:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px; background:#c9f24d; border-radius:50%; }
   #msg { position:absolute; left:50%; top:22%; transform:translateX(-50%); font-size:22px; letter-spacing:.2em; text-transform:uppercase; color:#c9f24d; opacity:0; transition:opacity .4s; text-shadow:0 2px 12px #000; }
 </style>
 </head>
 <body>
 <div id="damage"></div>
-<div id="scope"><div class="ring"></div><div class="cx"></div><div class="cy"></div><div class="dot"></div></div>
+<div id="scope"><div class="ring"></div><div class="cx"></div><div class="cy"></div><div class="dot"></div><div class="zoom" id="zoomlvl">4x</div><div class="hint">Scroll / Z to change zoom</div></div>
 <div id="hud">
   <div id="crosshair"></div>
   <div id="hitmark"></div>
@@ -79,7 +81,7 @@
   <h1>BLACKOUT OPS</h1>
   <p>
     <kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Ctrl</kbd> crouch · <kbd>Space</kbd> jump<br/>
-    <kbd>Mouse</kbd> aim · <kbd>Click</kbd> fire · <kbd>Right-click</kbd> aim down sights · <kbd>R</kbd> reload<br/>
+    <kbd>Mouse</kbd> aim · <kbd>Click</kbd> fire · <kbd>Right-click</kbd> aim down sights · <kbd>Scroll</kbd> sniper zoom · <kbd>R</kbd> reload<br/>
     <kbd>1</kbd> pistol · <kbd>2</kbd> rifle · <kbd>3</kbd> shotgun · <kbd>4</kbd> knife · <kbd>5</kbd> sniper · <kbd>V</kbd> quick melee<br/>
     Survive the waves. Clear the compound.
   </p>
@@ -194,6 +196,9 @@ const WEAPONS = [
   { name:'Combat Knife',dmg:85, rpm:150, mag:Infinity, res:Infinity, spread:0, pellets:1, auto:false, reload:0, range:2.6, melee:true, recoil:0.03 },
   { name:'M82 Sniper',  dmg:150,rpm:48,  mag:5,  res:30,  spread:0.045, pellets:1, auto:false, reload:2.6, range:420, recoil:0.075, adsSpread:0.0004, adsFov:22, sniper:true }
 ];
+// sniper scope magnification steps (chosen while scoped)
+const SNIPER_ZOOMS = [ {label:'4x', fov:26}, {label:'8x', fov:14}, {label:'16x', fov:7} ];
+let zoomIdx = 0;
 // aim-down-sights tuning (default for non-sniper weapons)
 WEAPONS.forEach(w => {
   if(w.adsSpread === undefined) w.adsSpread = w.spread * (w.pellets>1 ? 0.6 : 0.28);
@@ -377,6 +382,7 @@ addEventListener('keydown', e => {
   if(e.code==='Digit4') swap(3);
   if(e.code==='Digit5') swap(4);
   if(e.code==='KeyR') reload();
+  if(e.code==='KeyZ' && WEAPONS[cur].sniper) setZoom((zoomIdx + 1) % SNIPER_ZOOMS.length);
   if(e.code==='KeyV') quickMelee();
   if(e.code==='ControlLeft' || e.code==='ControlRight' || e.code==='KeyC') player.crouch = true;
   if(e.code==='Space' && player.onGround && !player.crouch){ player.vel.y = 6.2; player.onGround=false; }
@@ -398,12 +404,25 @@ addEventListener('mouseup',   e => {
 });
 addEventListener('mousemove', e => {
   if(document.pointerLockElement !== renderer.domElement) return;
-  const sens = 0.0022 * (1 - adsT * (WEAPONS[cur].sniper ? 0.72 : 0.42));
+  const zoomMul = WEAPONS[cur].sniper ? (SNIPER_ZOOMS[zoomIdx].fov / 26) : 1;
+  const sens = 0.0022 * (1 - adsT * (WEAPONS[cur].sniper ? 1 - 0.28*zoomMul : 0.42));
   player.yaw   -= e.movementX * sens;
   player.pitch -= e.movementY * sens;
   player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
 });
-addEventListener('wheel', e => swap((cur + (e.deltaY>0?1:4)) % 5));
+addEventListener('wheel', e => {
+  if(aiming && WEAPONS[cur].sniper){
+    setZoom(zoomIdx + (e.deltaY>0 ? 1 : -1));
+    return;
+  }
+  swap((cur + (e.deltaY>0?1:4)) % 5);
+});
+function setZoom(i){
+  zoomIdx = Math.max(0, Math.min(SNIPER_ZOOMS.length-1, i));
+  const z = SNIPER_ZOOMS[zoomIdx];
+  $('zoomlvl').textContent = z.label;
+  if(aiming) flash('Scope ' + z.label);
+}
 
 function swap(i){ if(i===cur||dead) return; aiming = false; gunMeshes[cur].visible=false; cur=i; gunMeshes[i].visible=true; reloading=false; swayT=0.35; hud(); }
 function reload(){
@@ -608,9 +627,11 @@ function update(dt){
   const adsTarget = aiming ? 1 : 0;
   adsT += (adsTarget - adsT) * (1 - Math.pow(0.00002, dt));
   if(Math.abs(adsT - adsTarget) < 0.005) adsT = adsTarget;
-  const wantFov = 75 + (wA.adsFov - 75) * adsT;
+  const targetAdsFov = wA.sniper ? SNIPER_ZOOMS[zoomIdx].fov : wA.adsFov;
+  const wantFov = 75 + (targetAdsFov - 75) * adsT;
   if(Math.abs(camera.fov - wantFov) > 0.01){ camera.fov = wantFov; camera.updateProjectionMatrix(); }
   const scoped = wA.sniper && adsT > 0.86;
+  if(scoped) $('scope').style.setProperty('--mag', String(zoomIdx));
   $('scope').style.opacity = scoped ? 1 : 0;
   $('crosshair').style.opacity = (scoped || adsT > 0.5) ? 0 : 1;
 

@@ -28,6 +28,9 @@
   #guns { position:absolute; right:24px; bottom:110px; text-align:right; font-size:12px; line-height:1.9; }
   #guns div { opacity:.4; }
   #guns div.on { opacity:1; color:#c9f24d; }
+  #minimap { position:absolute; right:24px; top:24px; width:190px; height:190px; padding:0; overflow:hidden; }
+  #minimap canvas { display:block; width:190px; height:190px; }
+  #minimap .mtag { position:absolute; left:8px; top:6px; font-size:9px; letter-spacing:.2em; color:#8b9aa8; text-transform:uppercase; }
   #damage { position:fixed; inset:0; box-shadow: inset 0 0 160px rgba(200,20,20,.9); opacity:0; transition:opacity .3s; pointer-events:none; }
   #overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse at center, #131a20 0%, #05070a 100%); text-align:center; z-index:10; }
   #overlay .box { max-width:640px; padding:40px; border:1px solid rgba(201,242,77,.3); background:rgba(8,11,14,.7); }
@@ -64,6 +67,7 @@
     <div class="big" id="hp">100</div>
     <div class="bar"><i id="hpbar" style="width:100%"></i></div>
   </div>
+  <div class="panel" id="minimap"><canvas id="mapcv" width="380" height="380"></canvas><div class="mtag">Radar</div></div>
   <div class="panel" id="ammo">
     <div class="label" id="gunname">Rifle</div>
     <div class="big"><span id="mag">30</span> <span style="font-size:16px;color:#8b9aa8">/ <span id="res">120</span></span></div>
@@ -718,6 +722,11 @@ function update(dt){
     if(d2.v){ d2.v.y -= 9*dt; d2.o.position.addScaledVector(d2.v, dt); }
     if(d2.t<=0){ scene.remove(d2.o); decals.splice(i,1); }
   }
+  // radar refresh
+  mapT -= dt;
+  if(mapT <= 0){ mapT = 0.033; drawMap(); }
+  $('minimap').style.opacity = scoped ? 0 : 1;
+
   if(msgT>0){ msgT-=dt; if(msgT<=0) $('msg').style.opacity=0; }
   if(hitT>0){ hitT-=dt; if(hitT<=0) $('hitmark').style.opacity=0; }
   if(dmgT>0){ dmgT-=dt; if(dmgT<=0) $('damage').style.opacity=0; }
@@ -731,6 +740,69 @@ function gameOver(){
   o.querySelector('.box').innerHTML =
     '<h1>K.I.A.</h1><p>You fell on wave ' + wave + ' with ' + kills + ' confirmed kills.</p>' +
     '<button onclick="location.reload()">Redeploy</button>';
+}
+
+// ---------- minimap / radar ----------
+const mapCv = $('mapcv'), mctx = mapCv.getContext('2d');
+const MAP_RANGE = 60;           // world units shown from the player outwards
+const MAP_R = mapCv.width/2;
+// static footprints of solid geometry, sampled once
+const mapBoxes = colliders.map(b => ({ x:(b.min.x+b.max.x)/2, z:(b.min.z+b.max.z)/2, w:b.max.x-b.min.x, d:b.max.z-b.min.z }));
+let mapT = 0;
+function drawMap(){
+  const s2 = MAP_R / MAP_RANGE;   // px per world unit
+  mctx.clearRect(0,0,mapCv.width,mapCv.height);
+  mctx.save();
+  mctx.beginPath(); mctx.arc(MAP_R,MAP_R,MAP_R-2,0,Math.PI*2); mctx.clip();
+  mctx.fillStyle = 'rgba(10,16,20,0.82)'; mctx.fillRect(0,0,mapCv.width,mapCv.height);
+
+  mctx.translate(MAP_R, MAP_R);
+  mctx.rotate(player.yaw);        // rotate world so the player always faces up
+  mctx.translate(-player.pos.x*s2, -player.pos.z*s2);
+
+  // range rings
+  mctx.strokeStyle = 'rgba(201,242,77,0.13)'; mctx.lineWidth = 1;
+  for(const r of [20,40]){
+    mctx.beginPath(); mctx.arc(player.pos.x*s2, player.pos.z*s2, r*s2, 0, Math.PI*2); mctx.stroke();
+  }
+
+  // buildings / cover
+  mctx.fillStyle = 'rgba(150,168,182,0.45)';
+  for(const b of mapBoxes){
+    if(Math.abs(b.x-player.pos.x) > MAP_RANGE+14 || Math.abs(b.z-player.pos.z) > MAP_RANGE+14) continue;
+    mctx.fillRect((b.x-b.w/2)*s2, (b.z-b.d/2)*s2, b.w*s2, b.d*s2);
+  }
+
+  // pickups
+  for(const p of pickups){
+    const c = '#' + GUN_COLOR[p.gi].toString(16).padStart(6,'0');
+    mctx.fillStyle = c;
+    mctx.beginPath(); mctx.arc(p.obj.position.x*s2, p.obj.position.z*s2, 4, 0, Math.PI*2); mctx.fill();
+  }
+
+  // enemies
+  for(const e of enemies){
+    if(e.dead) continue;
+    const ex = e.obj.position.x, ez = e.obj.position.z;
+    if(Math.hypot(ex-player.pos.x, ez-player.pos.z) > MAP_RANGE) continue;
+    mctx.fillStyle = e.name === 'Heavy' ? '#7fb3ff' : e.name === 'Rusher' ? '#9be36f' : '#ff5a5a';
+    mctx.beginPath(); mctx.arc(ex*s2, ez*s2, 5.5, 0, Math.PI*2); mctx.fill();
+  }
+  mctx.restore();
+
+  // player arrow (always centred, pointing up) + view cone
+  mctx.save();
+  mctx.translate(MAP_R, MAP_R);
+  mctx.fillStyle = 'rgba(201,242,77,0.13)';
+  mctx.beginPath(); mctx.moveTo(0,0);
+  mctx.arc(0,0, MAP_R*0.9, -Math.PI/2 - 0.45, -Math.PI/2 + 0.45); mctx.closePath(); mctx.fill();
+  mctx.fillStyle = '#c9f24d';
+  mctx.beginPath(); mctx.moveTo(0,-9); mctx.lineTo(6.5,7); mctx.lineTo(0,3.5); mctx.lineTo(-6.5,7);
+  mctx.closePath(); mctx.fill();
+  mctx.restore();
+
+  mctx.strokeStyle = 'rgba(201,242,77,0.3)'; mctx.lineWidth = 3;
+  mctx.beginPath(); mctx.arc(MAP_R,MAP_R,MAP_R-2,0,Math.PI*2); mctx.stroke();
 }
 
 // ---------- start ----------

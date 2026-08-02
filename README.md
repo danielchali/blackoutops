@@ -1,24 +1,16 @@
 # Pixel Fury
 
-create a fps game in html only, must have different guns, melee,ENERMIES, 3D WORLD (JUST LIKE cod)
+A fully static first-person shooter experience that can be hosted on GitHub Pages.
 
-This project was built with [Lovable](https://lovable.dev).
+## Run locally
 
-## Build with Lovable
+Open the repository folder directly in a browser, or use any static file server if you want a local preview.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/4adec84a-ddc2-4e8c-bb3b-d1930adb2305).
+## Deploy to GitHub Pages
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+1. Push the repository to GitHub.
+2. Open the repository Settings → Pages.
+3. Choose the main branch and the root folder.
+4. Publish.
 
-## Development
-
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
-
-```sh
-git clone <this-repository-url>
-cd <repository-name>
-npm i
-npm run dev
-```
+The site works as plain HTML, CSS, and JavaScript with no build step and no Node runtime required.

@@ -36,11 +36,19 @@
   kbd { background:#1b2229; border:1px solid #2c3742; padding:2px 7px; color:#e8eef5; }
   button { margin-top:26px; pointer-events:auto; cursor:pointer; background:#c9f24d; color:#0b0d10; border:0; padding:14px 34px; font:inherit; font-weight:700; letter-spacing:.15em; text-transform:uppercase; }
   button:hover { background:#dcff6a; }
+  #scope { position:fixed; inset:0; opacity:0; transition:opacity .12s; pointer-events:none; z-index:5;
+    background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 27%, rgba(0,0,0,.98) 30%); }
+  #scope .ring { position:absolute; left:50%; top:50%; width:60vh; height:60vh; transform:translate(-50%,-50%); border:2px solid rgba(0,0,0,.9); border-radius:50%; box-shadow:0 0 0 2px rgba(201,242,77,.25) inset; }
+  #scope .cx, #scope .cy { position:absolute; left:50%; top:50%; background:rgba(20,25,20,.9); }
+  #scope .cx { width:60vh; height:1px; transform:translate(-50%,-50%); }
+  #scope .cy { height:60vh; width:1px; transform:translate(-50%,-50%); }
+  #scope .dot { position:absolute; left:50%; top:50%; width:5px; height:5px; margin:-2.5px 0 0 -2.5px; background:#c9f24d; border-radius:50%; }
   #msg { position:absolute; left:50%; top:22%; transform:translateX(-50%); font-size:22px; letter-spacing:.2em; text-transform:uppercase; color:#c9f24d; opacity:0; transition:opacity .4s; text-shadow:0 2px 12px #000; }
 </style>
 </head>
 <body>
 <div id="damage"></div>
+<div id="scope"><div class="ring"></div><div class="cx"></div><div class="cy"></div><div class="dot"></div></div>
 <div id="hud">
   <div id="crosshair"></div>
   <div id="hitmark"></div>
@@ -63,6 +71,7 @@
     <div data-g="1" class="on">2 · Rifle</div>
     <div data-g="2">3 · Shotgun</div>
     <div data-g="3">4 · Combat Knife</div>
+    <div data-g="4">5 · M82 Sniper</div>
   </div>
 </div>
 
@@ -70,8 +79,8 @@
   <h1>BLACKOUT OPS</h1>
   <p>
     <kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Ctrl</kbd> crouch · <kbd>Space</kbd> jump<br/>
-    <kbd>Mouse</kbd> aim · <kbd>Click</kbd> fire · <kbd>R</kbd> reload<br/>
-    <kbd>1</kbd> pistol · <kbd>2</kbd> rifle · <kbd>3</kbd> shotgun · <kbd>4</kbd> knife · <kbd>V</kbd> quick melee<br/>
+    <kbd>Mouse</kbd> aim · <kbd>Click</kbd> fire · <kbd>Right-click</kbd> aim down sights · <kbd>R</kbd> reload<br/>
+    <kbd>1</kbd> pistol · <kbd>2</kbd> rifle · <kbd>3</kbd> shotgun · <kbd>4</kbd> knife · <kbd>5</kbd> sniper · <kbd>V</kbd> quick melee<br/>
     Survive the waves. Clear the compound.
   </p>
   <button id="start">Deploy</button>
@@ -182,8 +191,14 @@ const WEAPONS = [
   { name:'M9 Pistol',   dmg:26, rpm:340, mag:12, res:96,  spread:0.010, pellets:1, auto:false, reload:1.1, range:120, recoil:0.020 },
   { name:'AR-15 Rifle', dmg:19, rpm:720, mag:30, res:210, spread:0.017, pellets:1, auto:true,  reload:1.6, range:160, recoil:0.013 },
   { name:'12g Shotgun', dmg:15, rpm:80,  mag:6,  res:48,  spread:0.075, pellets:9, auto:false, reload:2.2, range:38,  recoil:0.055 },
-  { name:'Combat Knife',dmg:85, rpm:150, mag:Infinity, res:Infinity, spread:0, pellets:1, auto:false, reload:0, range:2.6, melee:true, recoil:0.03 }
+  { name:'Combat Knife',dmg:85, rpm:150, mag:Infinity, res:Infinity, spread:0, pellets:1, auto:false, reload:0, range:2.6, melee:true, recoil:0.03 },
+  { name:'M82 Sniper',  dmg:150,rpm:48,  mag:5,  res:30,  spread:0.045, pellets:1, auto:false, reload:2.6, range:420, recoil:0.075, adsSpread:0.0004, adsFov:22, sniper:true }
 ];
+// aim-down-sights tuning (default for non-sniper weapons)
+WEAPONS.forEach(w => {
+  if(w.adsSpread === undefined) w.adsSpread = w.spread * (w.pellets>1 ? 0.6 : 0.28);
+  if(w.adsFov === undefined) w.adsFov = 55;
+});
 WEAPONS.forEach(w => { w.inMag = w.mag; w.reserve = w.res; });
 let cur = 1, lastShot = 0, reloading = false, recoilKick = 0, swayT = 0;
 
@@ -221,12 +236,23 @@ function buildGun(i){
   if(i===3){ const b=add(0.02,0.10,0.44,0,0.02,-0.20,mkMat(0xb9c4cc,0.95)); b.rotation.x=0.06;
              add(0.05,0.06,0.16,0,-0.02,0.06,mkMat(0x1d1f22,0.2));
              hand(0.0,-0.03,0.10,-0.05,0.20,1); }
+  if(i===4){ add(0.09,0.11,1.05,0,0,-0.42,dark);                       // receiver
+             add(0.045,0.045,0.55,0,0.01,-1.05,grey);                  // long barrel
+             add(0.07,0.10,0.30,0,-0.09,0.28,wood);                    // stock
+             add(0.07,0.13,0.10,0,-0.11,0.06,grey);                    // grip
+             add(0.06,0.16,0.08,0,-0.13,-0.20,dark);                   // mag
+             const sc = add(0.075,0.075,0.44,0,0.11,-0.30,mkMat(0x14181b,0.4)); // scope tube
+             add(0.10,0.10,0.06,0,0.11,-0.52,mkMat(0x0b0e10,0.4));      // objective
+             add(0.045,0.06,0.05,0,0.05,-0.18,grey); add(0.045,0.06,0.05,0,0.05,-0.42,grey); // rings
+             add(0.05,0.05,0.20,0,-0.14,-0.62,grey);                    // bipod stub
+             sc.name='scope';
+             hand(0.02,-0.14,0.06,-0.10,0.28,1); hand(-0.06,-0.15,-0.52,0.75,0.05,-1); }
   g.position.set(0.26,-0.24,-0.5); g.scale.setScalar(0.55);
 
   g.visible = false;
   vm.add(g); return g;
 }
-for(let i=0;i<4;i++) gunMeshes.push(buildGun(i));
+for(let i=0;i<5;i++) gunMeshes.push(buildGun(i));
 gunMeshes[cur].visible = true;
 
 const muzzle = new THREE.PointLight(0xffcc66, 0, 12);
@@ -349,6 +375,7 @@ addEventListener('keydown', e => {
   if(e.code==='Digit2') swap(1);
   if(e.code==='Digit3') swap(2);
   if(e.code==='Digit4') swap(3);
+  if(e.code==='Digit5') swap(4);
   if(e.code==='KeyR') reload();
   if(e.code==='KeyV') quickMelee();
   if(e.code==='ControlLeft' || e.code==='ControlRight' || e.code==='KeyC') player.crouch = true;
@@ -359,18 +386,26 @@ addEventListener('keyup', e => {
   if(e.code==='ControlLeft' || e.code==='ControlRight' || e.code==='KeyC') player.crouch = false;
 });
 
-let firing = false;
-addEventListener('mousedown', e => { if(e.button===0) firing = true; });
-addEventListener('mouseup',   e => { if(e.button===0) firing = false; });
+let firing = false, aiming = false, adsT = 0; // adsT: 0 = hip, 1 = fully aimed
+addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('mousedown', e => {
+  if(e.button===0) firing = true;
+  if(e.button===2 && !WEAPONS[cur].melee && !dead){ aiming = true; e.preventDefault(); }
+});
+addEventListener('mouseup',   e => {
+  if(e.button===0) firing = false;
+  if(e.button===2) aiming = false;
+});
 addEventListener('mousemove', e => {
   if(document.pointerLockElement !== renderer.domElement) return;
-  player.yaw   -= e.movementX * 0.0022;
-  player.pitch -= e.movementY * 0.0022;
+  const sens = 0.0022 * (1 - adsT * (WEAPONS[cur].sniper ? 0.72 : 0.42));
+  player.yaw   -= e.movementX * sens;
+  player.pitch -= e.movementY * sens;
   player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
 });
-addEventListener('wheel', e => swap((cur + (e.deltaY>0?1:3)) % 4));
+addEventListener('wheel', e => swap((cur + (e.deltaY>0?1:4)) % 5));
 
-function swap(i){ if(i===cur||dead) return; gunMeshes[cur].visible=false; cur=i; gunMeshes[i].visible=true; reloading=false; swayT=0.35; hud(); }
+function swap(i){ if(i===cur||dead) return; aiming = false; gunMeshes[cur].visible=false; cur=i; gunMeshes[i].visible=true; reloading=false; swayT=0.35; hud(); }
 function reload(){
   const w = WEAPONS[cur];
   if(w.melee || reloading || w.inMag===w.mag || w.reserve<=0) return;
@@ -391,11 +426,12 @@ function quickMelee(){
 const ray = new THREE.Raycaster();
 const tmp = new THREE.Vector3();
 function hitScan(w, isMelee){
+  const spread = w.spread + (( w.adsSpread ?? w.spread ) - w.spread) * adsT;
   const dir = new THREE.Vector3();
   camera.getWorldDirection(dir);
   for(let p=0;p<w.pellets;p++){
     const d = dir.clone();
-    d.x += (Math.random()-0.5)*w.spread; d.y += (Math.random()-0.5)*w.spread; d.z += (Math.random()-0.5)*w.spread;
+    d.x += (Math.random()-0.5)*spread; d.y += (Math.random()-0.5)*spread; d.z += (Math.random()-0.5)*spread;
     d.normalize();
     ray.set(camera.getWorldPosition(tmp).clone(), d);
     ray.far = w.range;
@@ -427,7 +463,7 @@ function hasLOS(from, to){
 }
 // ---------- pickups ----------
 const pickups = [];
-const GUN_COLOR = [0x6fa8ff, 0xffc447, 0xff7a4d, 0xffffff];
+const GUN_COLOR = [0x6fa8ff, 0xffc447, 0xff7a4d, 0xffffff, 0xb388ff];
 function spawnPickup(pos, kind, gi){
   const g = new THREE.Group();
   const col = GUN_COLOR[gi];
@@ -485,8 +521,9 @@ function tryFire(dt){
   if(w.inMag<=0){ if(firePressedEdge) reload(); return; }
   lastShot = now; w.inMag--;
   hitScan(w,false);
-  recoilKick += w.recoil;
-  player.pitch += w.recoil*0.6;
+  const rmul = 1 - adsT*0.4;
+  recoilKick += w.recoil * rmul;
+  player.pitch += w.recoil*0.6 * rmul;
   muzzle.intensity = 6;
   hud();
 }
@@ -565,12 +602,33 @@ function update(dt){
   wasFiring = firing;
   muzzle.intensity *= Math.pow(0.0001, dt);
 
+  // aim down sights
+  const wA = WEAPONS[cur];
+  if(wA.melee || dead || reloading) aiming = false;
+  const adsTarget = aiming ? 1 : 0;
+  adsT += (adsTarget - adsT) * (1 - Math.pow(0.00002, dt));
+  if(Math.abs(adsT - adsTarget) < 0.005) adsT = adsTarget;
+  const wantFov = 75 + (wA.adsFov - 75) * adsT;
+  if(Math.abs(camera.fov - wantFov) > 0.01){ camera.fov = wantFov; camera.updateProjectionMatrix(); }
+  const scoped = wA.sniper && adsT > 0.86;
+  $('scope').style.opacity = scoped ? 1 : 0;
+  $('crosshair').style.opacity = (scoped || adsT > 0.5) ? 0 : 1;
+
   // viewmodel sway / melee anim
   const g = gunMeshes[cur];
+  gunMeshes[cur].visible = !scoped;
   const idle = Math.sin(now()/1000*2)*0.006;
   function now(){ return performance.now(); }
-  g.position.set(0.30, -0.26 + Math.sin(bob)*0.012 + idle, -0.85 + recoilKick*2.2);
-  g.rotation.set(-recoilKick*3 + (meleeAnim>0 ? -Math.sin((0.36-meleeAnim)/0.36*Math.PI)*1.1 : 0), swayT*1.2, meleeAnim>0 ? Math.sin((0.36-meleeAnim)/0.36*Math.PI)*0.5 : 0);
+  const swayMul = 1 - adsT*0.85;
+  const hipX = 0.30, adsX = 0.0;
+  const hipY = -0.26, adsY = wA.sniper ? -0.135 : -0.15;
+  const hipZ = -0.85, adsZ = wA.sniper ? -0.62 : -0.66;
+  g.position.set(
+    hipX + (adsX - hipX)*adsT,
+    (hipY + (adsY - hipY)*adsT) + (Math.sin(bob)*0.012 + idle)*swayMul,
+    (hipZ + (adsZ - hipZ)*adsT) + recoilKick*2.2
+  );
+  g.rotation.set(-recoilKick*3 + (meleeAnim>0 ? -Math.sin((0.36-meleeAnim)/0.36*Math.PI)*1.1 : 0), swayT*1.2*swayMul, meleeAnim>0 ? Math.sin((0.36-meleeAnim)/0.36*Math.PI)*0.5 : 0);
   if(meleeAnim>0) meleeAnim = Math.max(0, meleeAnim-dt);
   swayT = Math.max(0, swayT-dt);
 

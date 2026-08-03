@@ -1710,8 +1710,11 @@ document.addEventListener('pointerlockchange', () => {
   if(document.pointerLockElement !== renderer.domElement && started && !dead){
     $('overlay').style.display = 'flex';
     $('overlay').querySelector('.box').innerHTML =
-      '<h1>PAUSED</h1><p>Wave ' + wave + ' · ' + kills + ' kills</p><button id="resume">Resume</button>';
+      '<h1>PAUSED</h1><p>Wave ' + wave + ' · ' + kills + ' kills</p>' +
+      '<button id="resume">Resume</button>' +
+      '<button id="goHome" style="margin-left:10px; background:#1f2530; color:#e8eef5;">Home</button>';
     $('resume').onclick = () => { $('overlay').style.display='none'; renderer.domElement.requestPointerLock(); };
+    $('goHome').onclick = () => { location.reload(); };
   }
 });
 hud();

@@ -982,7 +982,7 @@ function startStoryMode(){
   storyState.evac = false;
   storyState.helicopterVisible = false;
   storyState.encounterActive = false;
-  storyState.encounterCleared = true;
+  storyState.encounterCleared = false;
   storyHeli.visible = false;
   flash('Operation: First Contact');
   setTimeout(startStoryEncounter, 700);
@@ -993,7 +993,7 @@ function advanceStoryMission(message){
   storyState.objectiveComplete = true;
   storyState.mission++;
   storyState.encounterActive = false;
-  storyState.encounterCleared = true;
+  storyState.encounterCleared = false;
   flash(message);
   if(storyState.mode === 'story' && storyState.mission < storyMissions.length){
     setTimeout(startStoryEncounter, 1200);
@@ -1546,7 +1546,6 @@ function update(dt){
     const houseDist = Math.hypot(player.pos.x - storyHouse.position.x, player.pos.z - storyHouse.position.z);
     if(houseDist < 10) {
       storyState.houseEntered = true;
-      storyState.munitionsCollected = true;
       flash('Intel recovered');
     }
   }
@@ -1663,7 +1662,8 @@ function drawMap(){
 
   // pickups
   for(const p of pickups){
-    const c = '#' + GUN_COLOR[p.gi].toString(16).padStart(6,'0');
+    if(p.kind === 'grenade') continue;
+    const c = '#' + (GUN_COLOR[p.gi] || 0xffffff).toString(16).padStart(6,'0');
     mctx.fillStyle = c;
     mctx.beginPath(); mctx.arc(p.obj.position.x*s2, p.obj.position.z*s2, 4, 0, Math.PI*2); mctx.fill();
   }

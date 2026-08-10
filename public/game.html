@@ -79,7 +79,31 @@
   .btn-reload { width:50px; height:50px; }
   .btn-grenade { width:48px; height:48px; }
   .btn-melee { width:48px; height:48px; }
+  .btn-mission { width:44px; height:44px; }
   .touch-look { position:fixed; inset:0; z-index:15; pointer-events:none; }
+  @media (max-width:960px) and (pointer:coarse) {
+    .panel { padding:5px 8px; backdrop-filter:blur(4px); }
+    .big { font-size:18px; }
+    .label { font-size:8px; letter-spacing:.12em; }
+    .bar { height:5px; margin-top:4px; }
+    #health { left:10px; bottom:190px; min-width:110px; }
+    #ammo { right:10px; bottom:190px; min-width:95px; }
+    #stats { left:10px; top:8px; }
+    #guns { display:none; }
+    #minimap { width:100px; height:100px; right:8px; top:8px; }
+    #minimap canvas { width:100px; height:100px; }
+    #minimap .mtag { font-size:7px; }
+    #msg { font-size:14px; top:16%; letter-spacing:.12em; }
+    #missionPanel { left:10px; top:55px; min-width:160px; max-width:55vw; }
+    #missionPanel .big { font-size:13px; }
+    #missionPanel .label { font-size:7px; }
+    #overlay .box { padding:16px 14px; max-width:92vw; }
+    h1 { font-size:24px; letter-spacing:.08em; }
+    p { font-size:10px; line-height:1.5; }
+    button { padding:10px 18px; font-size:11px; letter-spacing:.1em; }
+    kbd { font-size:9px; padding:1px 3px; }
+    #crosshair { width:16px; height:16px; }
+  }
 </style>
 </head>
 <body>
@@ -98,6 +122,7 @@
     </div>
   </div>
   <div class="touch-actions">
+    <button class="action-btn btn-mission" id="touchMission"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
     <button class="action-btn btn-jump" id="touchJump"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 14 12 9 7 14"/><line x1="12" y1="9" x2="12" y2="20"/><path d="M5 5h14" stroke-dasharray="2 3"/></svg></button>
     <div class="touch-actions-row">
       <button class="action-btn btn-reload" id="touchReload"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
@@ -1044,7 +1069,7 @@ function startStoryMode(){
   storyState.encounterActive = false;
   storyState.encounterCleared = false;
   storyHeli.visible = false;
-  flash('Operation: First Contact');
+  flash('TAB for mission briefing');
   setTimeout(startStoryEncounter, 700);
   hud();
 }
@@ -1090,6 +1115,7 @@ function hud(){
   document.querySelectorAll('#guns div').forEach(el=>el.classList.toggle('on', +el.dataset.g===cur));
 }
 let msgT=0;
+let missionVisible = false;
 function flash(t){ $('msg').textContent=t; $('msg').style.opacity=1; msgT=2.4; }
 let hitT=0;
 function hitmark(){ $('hitmark').style.opacity=1; hitT=0.12; }
@@ -1169,6 +1195,7 @@ bindTouchButton(document.getElementById('touchJump'), () => { pressJump(); }, ()
 bindTouchButton(document.getElementById('touchReload'), () => { pressReload(); }, () => {});
 bindTouchButton(document.getElementById('touchGrenade'), () => { throwGrenade(); }, () => {});
 bindTouchButton(document.getElementById('touchMelee'), () => { quickMelee(); }, () => {});
+bindTouchButton(document.getElementById('touchMission'), () => { missionVisible = !missionVisible; $('missionPanel').style.display = missionVisible ? 'block' : 'none'; }, () => {});
 
 touchLook.addEventListener('touchstart', e => {
   if(!isTouchDevice) return;
@@ -1195,6 +1222,7 @@ touchLook.addEventListener('touchend', () => { touchMoveState.active = false; to
 
 addEventListener('keydown', e => {
   keys[e.code] = true;
+  if(e.code==='Tab'){ e.preventDefault(); missionVisible = !missionVisible; $('missionPanel').style.display = missionVisible ? 'block' : 'none'; }
   if(e.code==='Digit1') swap(0);
   if(e.code==='Digit2') swap(1);
   if(e.code==='Digit3') swap(2);
@@ -1486,12 +1514,12 @@ function loop(){
 loop();
 
 function updateMission(dt){
-  if(storyState.mode !== 'story') return;
+  if(storyState.mode !== 'story'){ $('missionPanel').style.display = 'none'; missionVisible = false; return; }
   const mission = storyMissions[storyState.mission];
   if(!mission) return;
-  $('missionPanel').style.display = 'block';
   $('missionTitle').textContent = mission.title;
   $('missionText').textContent = mission.text;
+  $('missionPanel').style.display = missionVisible ? 'block' : 'none';
   if(mission.target === 'gate' && storyState.encounterCleared && storyState.encounterActive === false){
     advanceStoryMission('Objective complete');
   }

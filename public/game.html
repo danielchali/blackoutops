@@ -80,7 +80,9 @@
   .btn-grenade { width:48px; height:48px; }
   .btn-melee { width:48px; height:48px; }
   .btn-mission { width:44px; height:44px; }
+  .btn-swap { width:52px; height:52px; background:rgba(201,242,77,.14); border-color:rgba(201,242,77,.35); }
   .touch-look { position:fixed; inset:0; z-index:15; pointer-events:none; }
+  .touch-controls.visible ~ .touch-look, .touch-look.active-look { pointer-events:auto; }
   @media (max-width:960px) and (pointer:coarse) {
     .panel { padding:5px 8px; backdrop-filter:blur(4px); }
     .big { font-size:18px; }
@@ -125,6 +127,7 @@
     <button class="action-btn btn-mission" id="touchMission"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></button>
     <button class="action-btn btn-jump" id="touchJump"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 14 12 9 7 14"/><line x1="12" y1="9" x2="12" y2="20"/><path d="M5 5h14" stroke-dasharray="2 3"/></svg></button>
     <div class="touch-actions-row">
+      <button class="action-btn btn-swap" id="touchSwap" title="Swap Weapon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#c9f24d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12A9 9 0 0 0 6 5.3L3 8"/><path d="M21 3v5h-5"/><path d="M3 12a9 9 0 0 0 15 6.7l3-2.7"/><path d="M3 21v-5h5"/></svg></button>
       <button class="action-btn btn-reload" id="touchReload"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
       <button class="action-btn btn-aim" id="touchAim"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/></svg></button>
     </div>
@@ -1012,43 +1015,46 @@ function spawnEnemy(t){
   const rUpperLeg = lUpperLeg.clone(); rUpperLeg.position.x = 0.16;
   const rLowerLeg = lLowerLeg.clone(); rLowerLeg.position.x = 0.16;
 
-  // Arms - Sleeve cuffs, elbow pads, detailed gloves & unit patch (Tightly gripping weapon)
+  // Arms - Sleeve cuffs, elbow pads, detailed gloves & unit patch (Holding gun in front)
   const lUpperArm = new THREE.Group(); lUpperArm.position.set(-0.32,1.28,0);
-  lUpperArm.rotation.x = -1.15; lUpperArm.rotation.y = 0.40;
-  const lUpperArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.56, 12), bodyMat); lUpperArmMesh.position.z=-0.28; lUpperArmMesh.castShadow=true; lUpperArm.add(lUpperArmMesh);
+  lUpperArm.rotation.x = -1.25; lUpperArm.rotation.y = 0.35;
+  const lUpperArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.56, 12), bodyMat); lUpperArmMesh.position.y=-0.28; lUpperArmMesh.castShadow=true; lUpperArm.add(lUpperArmMesh);
   
   // Shoulder Unit Patch
-  const patch = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.10, 0.12), new THREE.MeshStandardMaterial({ color:0xc9f24d })); patch.position.set(-0.12, 0, -0.24); lUpperArm.add(patch);
+  const patch = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.10, 0.12), new THREE.MeshStandardMaterial({ color:0xc9f24d })); patch.position.set(-0.12, -0.15, 0); lUpperArm.add(patch);
   
-  const lElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), gearMat); lElbowJoint.position.z=-0.56; lElbowJoint.castShadow=true; lUpperArm.add(lElbowJoint);
-  const lLowerArm = new THREE.Group(); lLowerArm.position.set(0,0,-0.56);
-  lLowerArm.rotation.x = -0.35;
-  const lLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.11, 0.5, 12), bodyMat); lLowerArmMeshLocal.position.z=-0.24; lLowerArmMeshLocal.castShadow=true; lLowerArm.add(lLowerArmMeshLocal);
+  const lElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), gearMat); lElbowJoint.position.y=-0.56; lElbowJoint.castShadow=true; lUpperArm.add(lElbowJoint);
+  const lLowerArm = new THREE.Group(); lLowerArm.position.set(0,-0.56,0);
+  lLowerArm.rotation.x = 0.45;
+  const lLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.11, 0.5, 12), bodyMat); lLowerArmMeshLocal.position.y=-0.25; lLowerArmMeshLocal.castShadow=true; lLowerArm.add(lLowerArmMeshLocal);
   
   // Detailed Tactical Gloves with Knuckle Protection
-  const lHand = new THREE.Group(); lHand.position.z=-0.48;
+  const lHand = new THREE.Group(); lHand.position.y=-0.50;
   const lPalm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.14), bootMat); lPalm.castShadow=true; lHand.add(lPalm);
   const lKnuckleArmor = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.04, 0.06), metal); lKnuckleArmor.position.set(0, 0.03, 0); lHand.add(lKnuckleArmor);
   const lThumb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.06), bootMat); lThumb.position.set(0.07, 0, 0.02); lHand.add(lThumb);
   lLowerArm.add(lHand);
+  lUpperArm.add(lLowerArm);
 
   const rUpperArm = new THREE.Group(); rUpperArm.position.set(0.32,1.28,0);
-  rUpperArm.rotation.x = -1.15; rUpperArm.rotation.y = -0.30;
-  const rUpperArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.56, 12), bodyMat); rUpperArmMeshLocal.position.z=-0.28; rUpperArmMeshLocal.castShadow=true; rUpperArm.add(rUpperArmMeshLocal);
-  const rElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), gearMat); rElbowJoint.position.z=-0.56; rElbowJoint.castShadow=true; rUpperArm.add(rElbowJoint);
-  const rLowerArm = new THREE.Group(); rLowerArm.position.set(0,0,-0.56);
-  rLowerArm.rotation.x = -0.35;
-  const rLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.11, 0.5, 12), bodyMat); rLowerArmMeshLocal.position.z=-0.24; rLowerArmMeshLocal.castShadow=true; rLowerArm.add(rLowerArmMeshLocal);
+  rUpperArm.rotation.x = -1.25; rUpperArm.rotation.y = -0.25;
+  const rUpperArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.56, 12), bodyMat); rUpperArmMeshLocal.position.y=-0.28; rUpperArmMeshLocal.castShadow=true; rUpperArm.add(rUpperArmMeshLocal);
+  const rElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), gearMat); rElbowJoint.position.y=-0.56; rElbowJoint.castShadow=true; rUpperArm.add(rElbowJoint);
+  const rLowerArm = new THREE.Group(); rLowerArm.position.set(0,-0.56,0);
+  rLowerArm.rotation.x = 0.45;
+  const rLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.11, 0.5, 12), bodyMat); rLowerArmMeshLocal.position.y=-0.25; rLowerArmMeshLocal.castShadow=true; rLowerArm.add(rLowerArmMeshLocal);
   
-  const rHand = new THREE.Group(); rHand.position.z=-0.48;
+  const rHand = new THREE.Group(); rHand.position.y=-0.50;
   const rPalm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.14), bootMat); rPalm.castShadow=true; rHand.add(rPalm);
   const rKnuckleArmor = lKnuckleArmor.clone(); rHand.add(rKnuckleArmor);
   const rThumb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.06), bootMat); rThumb.position.set(-0.07, 0, 0.02); rHand.add(rThumb);
   rLowerArm.add(rHand);
+  rUpperArm.add(rLowerArm);
+
   const shoulderPad = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), trimMat); shoulderPad.position.set(-0.34,1.36,0); shoulderPad.castShadow=true; body.add(shoulderPad);
 
-  // Detailed Enemy Firearms
-  const gunG = new THREE.Group(); gunG.position.set(0.04,1.18,-0.42);
+  // Detailed Enemy Firearms held in front of torso
+  const gunG = new THREE.Group(); gunG.position.set(0.06,1.15,0.42);
   const wood = new THREE.MeshStandardMaterial({ color:0x5a3c22, roughness:0.85 });
   const add = (geo,mat,x,y,z,rx) => { const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); if(rx) m.rotation.x=rx; m.castShadow=true; gunG.add(m); return m; };
   let muzzleZ = -0.5;
@@ -1091,7 +1097,7 @@ function spawnEnemy(t){
   const lLowerLegMeshRef = lLowerLeg.children[0];
   const lUpperArmMeshRef = lUpperArm.children[0];
   const lLowerArmMeshRef = lLowerArm.children[0];
-  body.add(torso, chest, pelvis, neck, headPivot, lUpperLeg, rUpperLeg, lLowerLeg, rLowerLeg, lUpperArm, rUpperArm, lLowerArm, rLowerArm, gunG);
+  body.add(torso, chest, pelvis, neck, headPivot, lUpperLeg, rUpperLeg, lLowerLeg, rLowerLeg, lUpperArm, rUpperArm, gunG);
   g.add(body);
   [torso,pelvis,neck,skull,helmet,lUpperLegMeshRef,lLowerLegMeshRef,rUpperLegMesh,rLowerLegMesh,lUpperArmMeshRef,lLowerArmMeshRef,rUpperArmMesh,rLowerArmMesh,lPalm,rPalm].forEach(m=>{ if(m) m.castShadow=true; });
 
@@ -1293,32 +1299,59 @@ bindTouchButton(document.getElementById('touchFire'), () => { firing = true; }, 
 bindTouchButton(document.getElementById('touchAim'), () => { aiming = true; }, () => { aiming = false; });
 bindTouchButton(document.getElementById('touchJump'), () => { pressJump(); }, () => {});
 bindTouchButton(document.getElementById('touchReload'), () => { pressReload(); }, () => {});
+bindTouchButton(document.getElementById('touchSwap'), () => { swap((cur + 1) % 5); }, () => {});
 bindTouchButton(document.getElementById('touchGrenade'), () => { throwGrenade(); }, () => {});
 bindTouchButton(document.getElementById('touchMelee'), () => { quickMelee(); }, () => {});
 bindTouchButton(document.getElementById('touchMission'), () => { missionVisible = !missionVisible; $('missionPanel').style.display = missionVisible ? 'block' : 'none'; }, () => {});
+document.getElementById('ammo').addEventListener('click', () => { swap((cur + 1) % 5); });
+
+let lookTouchId = null;
 
 touchLook.addEventListener('touchstart', e => {
-  if(!isTouchDevice) return;
-  touchMoveState.active = true;
-  touchLook.style.pointerEvents = 'auto';
-  const t = e.touches[0];
-  touchMoveState.lastX = t.clientX;
-  touchMoveState.lastY = t.clientY;
   e.preventDefault();
+  touchLook.classList.add('active-look');
+  if (lookTouchId !== null) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    lookTouchId = t.identifier;
+    touchMoveState.active = true;
+    touchMoveState.lastX = t.clientX;
+    touchMoveState.lastY = t.clientY;
+    break;
+  }
 }, { passive:false });
+
 touchLook.addEventListener('touchmove', e => {
-  if(!touchMoveState.active) return;
-  const t = e.touches[0];
-  const dx = t.clientX - touchMoveState.lastX;
-  const dy = t.clientY - touchMoveState.lastY;
-  player.yaw -= dx * 0.004;
-  player.pitch -= dy * 0.004;
-  player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
-  touchMoveState.lastX = t.clientX;
-  touchMoveState.lastY = t.clientY;
   e.preventDefault();
+  if (!touchMoveState.active || lookTouchId === null) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    const t = e.changedTouches[i];
+    if (t.identifier === lookTouchId) {
+      const dx = t.clientX - touchMoveState.lastX;
+      const dy = t.clientY - touchMoveState.lastY;
+      player.yaw -= dx * 0.0045;
+      player.pitch -= dy * 0.0045;
+      player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
+      touchMoveState.lastX = t.clientX;
+      touchMoveState.lastY = t.clientY;
+      break;
+    }
+  }
 }, { passive:false });
-touchLook.addEventListener('touchend', () => { touchMoveState.active = false; touchLook.style.pointerEvents = 'none'; });
+
+function resetLookTouch(e) {
+  if (lookTouchId === null) return;
+  for (let i = 0; i < e.changedTouches.length; i++) {
+    if (e.changedTouches[i].identifier === lookTouchId) {
+      lookTouchId = null;
+      touchMoveState.active = false;
+      break;
+    }
+  }
+}
+
+touchLook.addEventListener('touchend', resetLookTouch);
+touchLook.addEventListener('touchcancel', resetLookTouch);
 
 addEventListener('keydown', e => {
   keys[e.code] = true;
@@ -1812,10 +1845,12 @@ function update(dt){
       e.lLowerLeg.rotation.x = Math.max(0, stride * 0.95);
       e.rUpperLeg.rotation.x = -stride;
       e.rLowerLeg.rotation.x = Math.max(0, -stride * 0.95);
-      e.lUpperArm.rotation.z = -0.22 + stride * 0.12;
-      e.rUpperArm.rotation.z = 0.22 - stride * 0.12;
-      e.lLowerArm.rotation.x = -0.55 - stride * 0.18;
-      e.rLowerArm.rotation.x = -0.55 + stride * 0.18;
+      e.lUpperArm.rotation.x = -1.25 + stride * 0.05;
+      e.rUpperArm.rotation.x = -1.25 - stride * 0.05;
+      e.lUpperArm.rotation.y = 0.35;
+      e.rUpperArm.rotation.y = -0.25;
+      e.lLowerArm.rotation.x = 0.45;
+      e.rLowerArm.rotation.x = 0.45;
       e.body.position.y = Math.sin(e.walk * 1.3) * 0.025 + 0.01;
     } else {
       e.body.position.y = 0.01;
@@ -2064,17 +2099,27 @@ function drawMap(){
 }
 
 // ---------- start ----------
+function enableTouchUI() {
+  touchLook.style.pointerEvents = 'auto';
+  touchLook.classList.add('active-look');
+  touchControls.classList.add('visible');
+}
+
+window.addEventListener('touchstart', () => {
+  if (started) enableTouchUI();
+}, { passive: true });
+
 $('startStory').addEventListener('click', () => {
   storyState.mode = 'story';
   $('overlay').style.display = 'none';
-  if(isTouchDevice) { touchLook.style.pointerEvents = 'auto'; touchControls.classList.add('visible'); }
+  if(isTouchDevice || 'ontouchstart' in window) { enableTouchUI(); }
   else renderer.domElement.requestPointerLock();
   if(!started){ started = true; startStoryMode(); }
 });
 $('startSurvival').addEventListener('click', () => {
   storyState.mode = 'freeplay';
   $('overlay').style.display = 'none';
-  if(isTouchDevice) { touchLook.style.pointerEvents = 'auto'; touchControls.classList.add('visible'); }
+  if(isTouchDevice || 'ontouchstart' in window) { enableTouchUI(); }
   else renderer.domElement.requestPointerLock();
   if(!started){ started = true; startWave(); hud(); }
 });

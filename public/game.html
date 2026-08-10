@@ -1015,46 +1015,47 @@ function spawnEnemy(t){
   const rUpperLeg = lUpperLeg.clone(); rUpperLeg.position.x = 0.16;
   const rLowerLeg = lLowerLeg.clone(); rLowerLeg.position.x = 0.16;
 
-  // Arms - Sleeve cuffs, elbow pads, detailed gloves & unit patch (Holding gun in front)
-  const lUpperArm = new THREE.Group(); lUpperArm.position.set(-0.32,1.28,0);
-  lUpperArm.rotation.x = -1.25; lUpperArm.rotation.y = 0.35;
-  const lUpperArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.56, 12), bodyMat); lUpperArmMesh.position.y=-0.28; lUpperArmMesh.castShadow=true; lUpperArm.add(lUpperArmMesh);
+  // Arms - Slim realistic proportions, sleeve cuffs, elbow pads & tactical gloves
+  const lUpperArm = new THREE.Group(); lUpperArm.position.set(-0.28, 1.30, 0);
+  lUpperArm.rotation.x = -1.20; lUpperArm.rotation.y = 0.35;
+  const lUpperArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.08, 0.48, 10), bodyMat); lUpperArmMesh.position.y = -0.24; lUpperArmMesh.castShadow = true; lUpperArm.add(lUpperArmMesh);
   
   // Shoulder Unit Patch
-  const patch = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.10, 0.12), new THREE.MeshStandardMaterial({ color:0xc9f24d })); patch.position.set(-0.12, -0.15, 0); lUpperArm.add(patch);
+  const patch = new THREE.Mesh(new THREE.BoxGeometry(0.015, 0.08, 0.10), new THREE.MeshStandardMaterial({ color:0xc9f24d })); patch.position.set(-0.09, -0.12, 0); lUpperArm.add(patch);
   
-  const lElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), gearMat); lElbowJoint.position.y=-0.56; lElbowJoint.castShadow=true; lUpperArm.add(lElbowJoint);
-  const lLowerArm = new THREE.Group(); lLowerArm.position.set(0,-0.56,0);
-  lLowerArm.rotation.x = 0.45;
-  const lLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.11, 0.5, 12), bodyMat); lLowerArmMeshLocal.position.y=-0.25; lLowerArmMeshLocal.castShadow=true; lLowerArm.add(lLowerArmMeshLocal);
+  const lElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), gearMat); lElbowJoint.position.y = -0.48; lElbowJoint.castShadow = true; lUpperArm.add(lElbowJoint);
+  const lLowerArm = new THREE.Group(); lLowerArm.position.set(0, -0.48, 0);
+  lLowerArm.rotation.x = 0.50;
+  const lLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.07, 0.42, 10), bodyMat); lLowerArmMeshLocal.position.y = -0.21; lLowerArmMeshLocal.castShadow = true; lLowerArm.add(lLowerArmMeshLocal);
   
-  // Detailed Tactical Gloves with Knuckle Protection
-  const lHand = new THREE.Group(); lHand.position.y=-0.50;
-  const lPalm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.14), bootMat); lPalm.castShadow=true; lHand.add(lPalm);
-  const lKnuckleArmor = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.04, 0.06), metal); lKnuckleArmor.position.set(0, 0.03, 0); lHand.add(lKnuckleArmor);
-  const lThumb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.06), bootMat); lThumb.position.set(0.07, 0, 0.02); lHand.add(lThumb);
+  // Tactical Gloves
+  const lHand = new THREE.Group(); lHand.position.y = -0.42;
+  const lPalm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.05, 0.11), bootMat); lPalm.castShadow = true; lHand.add(lPalm);
+  const lKnuckleArmor = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.03, 0.05), metal); lKnuckleArmor.position.set(0, 0.02, 0); lHand.add(lKnuckleArmor);
+  const lThumb = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.025, 0.05), bootMat); lThumb.position.set(0.05, 0, 0.02); lHand.add(lThumb);
   lLowerArm.add(lHand);
   lUpperArm.add(lLowerArm);
 
-  const rUpperArm = new THREE.Group(); rUpperArm.position.set(0.32,1.28,0);
-  rUpperArm.rotation.x = -1.25; rUpperArm.rotation.y = -0.25;
-  const rUpperArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.56, 12), bodyMat); rUpperArmMeshLocal.position.y=-0.28; rUpperArmMeshLocal.castShadow=true; rUpperArm.add(rUpperArmMeshLocal);
-  const rElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), gearMat); rElbowJoint.position.y=-0.56; rElbowJoint.castShadow=true; rUpperArm.add(rElbowJoint);
-  const rLowerArm = new THREE.Group(); rLowerArm.position.set(0,-0.56,0);
-  rLowerArm.rotation.x = 0.45;
-  const rLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.11, 0.5, 12), bodyMat); rLowerArmMeshLocal.position.y=-0.25; rLowerArmMeshLocal.castShadow=true; rLowerArm.add(rLowerArmMeshLocal);
+  const rUpperArm = new THREE.Group(); rUpperArm.position.set(0.28, 1.30, 0);
+  rUpperArm.rotation.x = -1.20; rUpperArm.rotation.y = -0.25;
+  const rUpperArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.08, 0.48, 10), bodyMat); rUpperArmMeshLocal.position.y = -0.24; rUpperArmMeshLocal.castShadow = true; rUpperArm.add(rUpperArmMeshLocal);
+  const rElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), gearMat); rElbowJoint.position.y = -0.48; rElbowJoint.castShadow = true; rUpperArm.add(rElbowJoint);
+  const rLowerArm = new THREE.Group(); rLowerArm.position.set(0, -0.48, 0);
+  rLowerArm.rotation.x = 0.50;
+  const rLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.07, 0.42, 10), bodyMat); rLowerArmMeshLocal.position.y = -0.21; rLowerArmMeshLocal.castShadow = true; rLowerArm.add(rLowerArmMeshLocal);
   
-  const rHand = new THREE.Group(); rHand.position.y=-0.50;
-  const rPalm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.14), bootMat); rPalm.castShadow=true; rHand.add(rPalm);
+  const rHand = new THREE.Group(); rHand.position.y = -0.42;
+  const rPalm = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.05, 0.11), bootMat); rPalm.castShadow = true; rHand.add(rPalm);
   const rKnuckleArmor = lKnuckleArmor.clone(); rHand.add(rKnuckleArmor);
-  const rThumb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.06), bootMat); rThumb.position.set(-0.07, 0, 0.02); rHand.add(rThumb);
+  const rThumb = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.025, 0.05), bootMat); rThumb.position.set(-0.05, 0, 0.02); rHand.add(rThumb);
   rLowerArm.add(rHand);
   rUpperArm.add(rLowerArm);
 
-  const shoulderPad = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), trimMat); shoulderPad.position.set(-0.34,1.36,0); shoulderPad.castShadow=true; body.add(shoulderPad);
+  const shoulderPadL = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 8), trimMat); shoulderPadL.position.set(-0.30, 1.34, 0); shoulderPadL.castShadow = true; body.add(shoulderPadL);
+  const shoulderPadR = shoulderPadL.clone(); shoulderPadR.position.x = 0.30; body.add(shoulderPadR);
 
-  // Detailed Enemy Firearms held in front of torso
-  const gunG = new THREE.Group(); gunG.position.set(0.06,1.15,0.42);
+  // Detailed Enemy Firearms held completely out in front of vest
+  const gunG = new THREE.Group(); gunG.position.set(0.05, 1.14, 0.78);
   const wood = new THREE.MeshStandardMaterial({ color:0x5a3c22, roughness:0.85 });
   const add = (geo,mat,x,y,z,rx) => { const m=new THREE.Mesh(geo,mat); m.position.set(x,y,z); if(rx) m.rotation.x=rx; m.castShadow=true; gunG.add(m); return m; };
   let muzzleZ = -0.5;
@@ -1845,12 +1846,12 @@ function update(dt){
       e.lLowerLeg.rotation.x = Math.max(0, stride * 0.95);
       e.rUpperLeg.rotation.x = -stride;
       e.rLowerLeg.rotation.x = Math.max(0, -stride * 0.95);
-      e.lUpperArm.rotation.x = -1.25 + stride * 0.05;
-      e.rUpperArm.rotation.x = -1.25 - stride * 0.05;
+      e.lUpperArm.rotation.x = -1.20 + stride * 0.05;
+      e.rUpperArm.rotation.x = -1.20 - stride * 0.05;
       e.lUpperArm.rotation.y = 0.35;
       e.rUpperArm.rotation.y = -0.25;
-      e.lLowerArm.rotation.x = 0.45;
-      e.rLowerArm.rotation.x = 0.45;
+      e.lLowerArm.rotation.x = 0.50;
+      e.rLowerArm.rotation.x = 0.50;
       e.body.position.y = Math.sin(e.walk * 1.3) * 0.025 + 0.01;
     } else {
       e.body.position.y = 0.01;

@@ -3,53 +3,472 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Blackout Ops is a browser-based first-person shooter with guns, melee, enemies, and a 3D world." />
-    <title>Blackout Ops</title>
+    <meta name="description" content="Pixel Fury: Blackout Ops - Next-gen browser 3D First Person Shooter. Story campaign, wave survival, mobile controls, and tactical weapons." />
+    <title>Pixel Fury: Blackout Ops | Main Menu</title>
     <link rel="icon" href="./public/favicon.ico" type="image/x-icon" sizes="any" />
     <link rel="shortcut icon" href="./public/favicon.ico" type="image/x-icon" />
     <link rel="apple-touch-icon" href="./public/logo.png" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+      body, html { width: 100%; height: 100%; overflow: hidden; background: #06090c; font-family: 'Rajdhani', sans-serif; color: #fff; }
+      
+      /* 3D Canvas Background */
+      #canvas3d { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
+
+      /* Scanlines & Vignette Overlay */
+      .vignette {
+        position: fixed; inset: 0; z-index: 2; pointer-events: none;
+        background: radial-gradient(circle at center, transparent 40%, rgba(3, 5, 8, 0.88) 100%),
+                    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+        background-size: 100% 100%, 100% 4px;
+      }
+      .grid-overlay {
+        position: fixed; inset: 0; z-index: 2; pointer-events: none; opacity: 0.05;
+        background-image: linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px);
+        background-size: 40px 40px;
+      }
+
+      /* Main UI Overlay Container */
+      .menu-container {
+        position: relative; z-index: 10; width: 100%; height: 100%;
+        display: grid; grid-template-rows: auto 1fr auto; padding: 28px 40px;
+      }
+
+      /* Top Header */
+      header {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid rgba(255, 180, 0, 0.2); padding-bottom: 16px;
+        backdrop-filter: blur(8px);
+      }
+      .brand-title { display: flex; align-items: center; gap: 16px; }
+      .brand-logo { width: 42px; height: 42px; filter: drop-shadow(0 0 10px rgba(255, 170, 0, 0.6)); }
+      .title-text h1 {
+        font-family: 'Orbitron', sans-serif; font-size: 26px; font-weight: 900; letter-spacing: 3px;
+        background: linear-gradient(90deg, #ffffff, #ffb700); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 20px rgba(255, 183, 0, 0.3);
+      }
+      .title-text p { font-size: 12px; letter-spacing: 4px; color: #ffb700; text-transform: uppercase; }
+      
+      .status-bar { display: flex; align-items: center; gap: 24px; font-size: 13px; letter-spacing: 2px; color: #8a9ba8; }
+      .status-item { display: flex; align-items: center; gap: 8px; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #00ff88; box-shadow: 0 0 8px #00ff88; }
+
+      /* Middle Layout */
+      .middle-section { display: grid; grid-template-columns: 360px 1fr 340px; align-items: center; gap: 20px; height: 100%; }
+
+      /* Navigation Menu */
+      .nav-menu { display: flex; flex-direction: column; gap: 14px; margin-top: 20px; }
+      .menu-btn {
+        position: relative; display: flex; align-items: center; justify-content: space-between;
+        padding: 16px 24px; background: rgba(12, 17, 24, 0.75); border: 1px solid rgba(255, 255, 255, 0.1);
+        border-left: 4px solid rgba(255, 183, 0, 0.4); border-radius: 4px; text-decoration: none; color: #fff;
+        font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 700; letter-spacing: 2px;
+        transition: all 0.25s ease; backdrop-filter: blur(12px); overflow: hidden;
+      }
+      .menu-btn::before {
+        content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(255, 183, 0, 0.25), transparent);
+        transform: translateX(-100%); transition: transform 0.3s ease;
+      }
+      .menu-btn:hover::before { transform: translateX(0); }
+      .menu-btn:hover {
+        border-color: #ffb700; border-left-color: #ffb700; border-left-width: 8px;
+        box-shadow: 0 0 24px rgba(255, 183, 0, 0.35); transform: translateX(8px); color: #fff;
+      }
+      .menu-btn.primary {
+        background: linear-gradient(90deg, rgba(255, 166, 0, 0.85), rgba(255, 102, 0, 0.75));
+        border-color: #ffaa00; border-left: 6px solid #fff; text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      }
+      .menu-btn.primary:hover {
+        background: linear-gradient(90deg, #ffaa00, #ff5500);
+        box-shadow: 0 0 32px rgba(255, 170, 0, 0.6);
+      }
+      .btn-tag { font-family: 'Rajdhani', sans-serif; font-size: 12px; letter-spacing: 1.5px; opacity: 0.7; }
+
+      /* Center Space (3D Character Focus Area) */
+      .center-focus { position: relative; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding-bottom: 40px; }
+      .operator-nameplate {
+        text-align: center; background: rgba(8, 12, 18, 0.6); padding: 12px 32px; border-radius: 20px;
+        border: 1px solid rgba(255, 183, 0, 0.3); backdrop-filter: blur(10px);
+      }
+      .operator-nameplate h2 { font-family: 'Orbitron', sans-serif; font-size: 20px; letter-spacing: 4px; color: #ffb700; }
+      .operator-nameplate p { font-size: 13px; letter-spacing: 3px; color: #a0b0c0; }
+
+      /* Right Side Spec Card */
+      .spec-card {
+        background: rgba(10, 15, 22, 0.75); border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px; padding: 24px; backdrop-filter: blur(12px); display: flex; flex-direction: column; gap: 16px;
+      }
+      .spec-card h3 { font-family: 'Orbitron', sans-serif; font-size: 14px; letter-spacing: 2.5px; color: #ffb700; border-bottom: 1px solid rgba(255,183,0,0.2); padding-bottom: 8px; }
+      .stat-row { display: flex; justify-content: space-between; font-size: 14px; letter-spacing: 1px; color: #c0d0e0; }
+      .stat-bar { height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+      .stat-fill { height: 100%; background: linear-gradient(90deg, #ff9900, #ffdd00); border-radius: 3px; }
+
+      /* Controls Guide Modal */
+      .modal {
+        position: fixed; inset: 0; z-index: 100; background: rgba(4, 6, 10, 0.85); backdrop-filter: blur(16px);
+        display: none; justify-content: center; align-items: center; padding: 20px;
+      }
+      .modal-box {
+        background: #0d121a; border: 1px solid #ffb700; border-radius: 8px; max-width: 600px; width: 100%;
+        padding: 32px; box-shadow: 0 0 40px rgba(255, 183, 0, 0.25);
+      }
+      .modal-box h2 { font-family: 'Orbitron', sans-serif; font-size: 22px; letter-spacing: 3px; color: #ffb700; margin-bottom: 20px; }
+      .key-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+      .key-item { display: flex; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 8px 14px; border-radius: 4px; font-size: 14px; }
+      .key-item kbd { background: #ffb700; color: #000; padding: 2px 8px; border-radius: 3px; font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 11px; }
+
+      /* Loadout Modal */
+      .loadout-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+      .weapon-card {
+        background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 14px;
+        text-align: center; cursor: pointer; transition: all 0.2s;
+      }
+      .weapon-card:hover, .weapon-card.active { border-color: #ffb700; background: rgba(255,183,0,0.15); }
+      .weapon-card h4 { font-family: 'Orbitron', sans-serif; font-size: 13px; color: #fff; margin-bottom: 4px; }
+      .weapon-card p { font-size: 11px; color: #a0a0a0; }
+
+      /* Footer */
+      footer {
+        display: flex; justify-content: space-between; align-items: center;
+        border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 14px; font-size: 12px; letter-spacing: 2px; color: #6a7b8c;
+      }
+      .close-btn {
+        background: #ffb700; color: #000; border: none; padding: 10px 24px; font-family: 'Orbitron', sans-serif;
+        font-weight: 700; letter-spacing: 2px; border-radius: 4px; cursor: pointer; float: right;
+      }
+
+      @media (max-width: 900px) {
+        .middle-section { grid-template-columns: 1fr; }
+        .spec-card { display: none; }
+        .menu-container { padding: 16px 20px; }
+        .title-text h1 { font-size: 20px; }
+      }
+    </style>
   </head>
   <body>
-    <main class="hero">
-      <section class="hero-card">
-        <div class="brand-row">
-          <img class="brand-logo" src="./public/logo.png" alt="Blackout Ops logo" />
-          <div class="brand-badge">Chali Dee</div>
-        </div>
+    <!-- 3D Canvas Scene -->
+    <canvas id="canvas3d"></canvas>
+    
+    <!-- Visual Overlays -->
+    <div class="vignette"></div>
+    <div class="grid-overlay"></div>
 
-        <div class="hero-copy">
-          <p class="eyebrow">Mission briefing</p>
-          <h1>Blackout Ops</h1>
-          <p class="lead">
-            Drop into a gritty 3D arena packed with hostile forces, smart wave pressure, and fast-fire combat from your browser.
-          </p>
-
-          <div class="creator-branding" aria-label="Created by Dred Labs">
-            <img class="creator-logo" src="./public/dredlabslogo.png" alt="Dred Labs logo" />
-            <span>by Dred Labs</span>
+    <!-- UI Overlay -->
+    <div class="menu-container">
+      <!-- Top Navigation Header -->
+      <header>
+        <div class="brand-title">
+          <img class="brand-logo" src="./public/logo.png" alt="Blackout Ops Emblem" />
+          <div class="title-text">
+            <h1>PIXEL FURY</h1>
+            <p>Blackout Ops // Tactical FPS</p>
           </div>
-
-          <div class="actions">
-            <a class="button primary" href="./public/game.html">Launch game</a>
-            
         </div>
 
-        <div class="feature-grid">
-          <article class="feature-card">
-            <h2>Wave-based combat</h2>
-            <p>Fight through escalating threats with increasing pressure and tougher enemies.</p>
-          </article>
-          <article class="feature-card">
-            <h2>Full 3D arena</h2>
-            <p>Traverse a detailed environment with props, cover, and combat-ready geometry.</p>
-          </article>
-          <article class="feature-card">
-            <h2>Touch & desktop ready</h2>
-            <p>Play with mouse and keyboard or jump straight into mobile-friendly controls.</p>
-          </article>
+        <div class="status-bar">
+          <div class="status-item"><div class="dot"></div> ONLINE SERVER</div>
+          <div class="status-item">PING: 22ms</div>
+          <div class="status-item">REGION: GLOBAL</div>
         </div>
-      </section>
-    </main>
+      </header>
+
+      <!-- Middle Content -->
+      <div class="middle-section">
+        <!-- Main Game Menu Buttons -->
+        <nav class="nav-menu">
+          <a class="menu-btn primary" href="./public/game.html">
+            <span>PLAY STORY CAMPAIGN</span>
+            <span class="btn-tag">SOLO / MISSIONS</span>
+          </a>
+          <a class="menu-btn" href="./public/game.html">
+            <span>SURVIVAL DEFENSE</span>
+            <span class="btn-tag">WAVE COMBAT</span>
+          </a>
+          <button class="menu-btn" id="openLoadout">
+            <span>OPERATOR LOADOUT</span>
+            <span class="btn-tag">ARMORY</span>
+          </button>
+          <button class="menu-btn" id="openControls">
+            <span>CONTROLS & SETTINGS</span>
+            <span class="btn-tag">CONFIG</span>
+          </button>
+        </nav>
+
+        <!-- Center Focus Area -->
+        <div class="center-focus">
+          <div class="operator-nameplate">
+            <h2>OPERATOR // PHANTOM-1</h2>
+            <p>SPECIAL RECON UNIT &bull; ARMED & READY</p>
+          </div>
+        </div>
+
+        <!-- Right Side Stats Card -->
+        <aside class="spec-card">
+          <h3>COMBAT PROFILE</h3>
+          <div>
+            <div class="stat-row"><span>OPERATOR HEALTH</span><span>100 HP</span></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: 100%;"></div></div>
+          </div>
+          <div>
+            <div class="stat-row"><span>PRIMARY WEAPON</span><span>AR-15 ASSAULT</span></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: 85%;"></div></div>
+          </div>
+          <div>
+            <div class="stat-row"><span>SIDEARM</span><span>M9 TACTICAL</span></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: 60%;"></div></div>
+          </div>
+          <div>
+            <div class="stat-row"><span>TACTICAL GRENADES</span><span>5 FRAGS</span></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: 75%;"></div></div>
+          </div>
+          <div>
+            <div class="stat-row"><span>MELEE EQUIPMENT</span><span>COMBAT KNIFE</span></div>
+            <div class="stat-bar"><div class="stat-fill" style="width: 95%;"></div></div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Footer -->
+      <footer>
+        <div>BUILD VERSION 2.4.0 &bull; DRED LABS &bull; THREE.JS ENGINE</div>
+        <div>MOUSE INTERACTIVE &bull; TAP OR CLICK TO DEPLOY</div>
+      </footer>
+    </div>
+
+    <!-- Controls Modal -->
+    <div class="modal" id="controlsModal">
+      <div class="modal-box">
+        <h2>FIELD CONTROLS</h2>
+        <div class="key-grid">
+          <div class="key-item"><span>Move Forward / Backward</span><span><kbd>W</kbd> <kbd>S</kbd></span></div>
+          <div class="key-item"><span>Strafe Left / Right</span><span><kbd>A</kbd> <kbd>D</kbd></span></div>
+          <div class="key-item"><span>Aim Down Sights</span><span><kbd>RMB</kbd></span></div>
+          <div class="key-item"><span>Fire Weapon</span><span><kbd>LMB</kbd></span></div>
+          <div class="key-item"><span>Jump / Vault</span><span><kbd>SPACE</kbd></span></div>
+          <div class="key-item"><span>Crouch</span><span><kbd>C</kbd> / <kbd>CTRL</kbd></span></div>
+          <div class="key-item"><span>Reload Weapon</span><span><kbd>R</kbd></span></div>
+          <div class="key-item"><span>Throw Frag Grenade</span><span><kbd>G</kbd></span></div>
+          <div class="key-item"><span>Quick Melee Strike</span><span><kbd>V</kbd></span></div>
+          <div class="key-item"><span>Toggle Mission Briefing</span><span><kbd>TAB</kbd></span></div>
+        </div>
+        <button class="close-btn" id="closeControls">BACK TO MENU</button>
+      </div>
+    </div>
+
+    <!-- Armory Loadout Modal -->
+    <div class="modal" id="loadoutModal">
+      <div class="modal-box">
+        <h2>ARMORY LOADOUT</h2>
+        <div class="loadout-grid">
+          <div class="weapon-card active">
+            <h4>AR-15 RIFLE</h4>
+            <p>720 RPM &bull; 30 Mag</p>
+          </div>
+          <div class="weapon-card">
+            <h4>12G SHOTGUN</h4>
+            <p>80 RPM &bull; 9 Pellets</p>
+          </div>
+          <div class="weapon-card">
+            <h4>M82 SNIPER</h4>
+            <p>150 Dmg &bull; 16x Scope</p>
+          </div>
+          <div class="weapon-card">
+            <h4>M9 PISTOL</h4>
+            <p>340 RPM &bull; Sidearm</p>
+          </div>
+          <div class="weapon-card">
+            <h4>COMBAT KNIFE</h4>
+            <p>85 Dmg &bull; Quick Strike</p>
+          </div>
+          <div class="weapon-card">
+            <h4>FRAG GRENADE</h4>
+            <p>140 Dmg &bull; Area Blast</p>
+          </div>
+        </div>
+        <button class="close-btn" id="closeLoadout">CONFIRM LOADOUT</button>
+      </div>
+    </div>
+
+    <!-- 3D Three.js Menu Background Script -->
+    <script>
+      // Initialize Three.js Scene
+      const canvas = document.getElementById('canvas3d');
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x06090c, 0.035);
+
+      const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 1.4, 4.2);
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+      // Lights
+      const ambientLight = new THREE.AmbientLight(0x2a3848, 0.8);
+      scene.add(ambientLight);
+
+      const keyLight = new THREE.DirectionalLight(0xffa500, 2.2); // Warm orange spotlight
+      keyLight.position.set(4, 5, 4); keyLight.castShadow = true;
+      scene.add(keyLight);
+
+      const rimLight = new THREE.DirectionalLight(0x00aaff, 3.0); // Cyan rim light behind soldier
+      rimLight.position.set(-4, 4, -3);
+      scene.add(rimLight);
+
+      const groundLight = new THREE.PointLight(0xff4500, 2.5, 8); // Orange floor embers light
+      groundLight.position.set(0, 0.2, 1);
+      scene.add(groundLight);
+
+      // Floor Plane (Dark Tactical Surface)
+      const floorMat = new THREE.MeshStandardMaterial({ color: 0x0c1117, roughness: 0.8, metalness: 0.4 });
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), floorMat);
+      floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+      scene.add(floor);
+
+      // Background Pillars / Geometry
+      const pillarMat = new THREE.MeshStandardMaterial({ color: 0x161d26, roughness: 0.6, metalness: 0.5 });
+      for (let i = -3; i <= 3; i += 2) {
+        const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.8, 6, 0.8), pillarMat);
+        pillar.position.set(i * 2.2, 3, -4); pillar.castShadow = true;
+        scene.add(pillar);
+      }
+
+      // --- Build 3D Soldier Character Model ---
+      const soldier = new THREE.Group();
+      soldier.position.set(0, 0, 0);
+
+      const skinMat = new THREE.MeshStandardMaterial({ color: 0xcb8b65, roughness: 0.7 });
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0x1a232a, roughness: 0.8 });
+      const trimMat = new THREE.MeshStandardMaterial({ color: 0x2b3844, roughness: 0.85 });
+      const gearMat = new THREE.MeshStandardMaterial({ color: 0x3d4b58, roughness: 0.9 });
+      const metalMat = new THREE.MeshStandardMaterial({ color: 0x22252a, roughness: 0.5, metalness: 0.8 });
+      const bootMat = new THREE.MeshStandardMaterial({ color: 0x111316, roughness: 0.9 });
+      const goggleLensMat = new THREE.MeshStandardMaterial({ color: 0x00d9ff, emissive: 0x004466, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.9 });
+
+      // Body Group
+      const body = new THREE.Group();
+
+      // Torso & Tactical Vest
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.36, 0.84, 16), bodyMat); torso.position.y = 1.25; torso.castShadow = true;
+      const vest = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.36, 0.50, 16), gearMat); vest.position.y = 1.28; vest.castShadow = true; body.add(vest);
+      for(let row=0; row<3; row++) {
+        const molle = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.035, 0.52), trimMat);
+        molle.position.set(0, 1.18 + row*0.09, 0); body.add(molle);
+      }
+
+      // Pelvis & Belt
+      const pelvis = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.34, 0.26, 16), bodyMat); pelvis.position.y = 0.82; pelvis.castShadow = true;
+      const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.08, 16), trimMat); belt.position.y = 0.92; body.add(belt);
+      const holster = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.26, 0.16), trimMat); holster.position.set(0.30, 0.72, 0.04); body.add(holster);
+
+      // Head, Helmet & Goggles
+      const headPivot = new THREE.Group(); headPivot.position.set(0, 1.88, 0);
+      const skull = new THREE.Mesh(new THREE.SphereGeometry(0.20, 14, 14), skinMat); skull.position.y = 0.08; skull.castShadow = true;
+      const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 14), trimMat); helmet.position.y = 0.16; helmet.castShadow = true;
+      const goggleFrame = new THREE.Mesh(new THREE.BoxGeometry(0.30, 0.10, 0.09), trimMat); goggleFrame.position.set(0, 0.10, 0.20); headPivot.add(goggleFrame);
+      const goggleLens = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.08, 0.07), goggleLensMat); goggleLens.position.set(0, 0.10, 0.22); headPivot.add(goggleLens);
+      const balaclava = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 10), new THREE.MeshStandardMaterial({ color: 0x15181c })); balaclava.position.set(0, 0.02, 0.12); headPivot.add(balaclava);
+      headPivot.add(skull, helmet);
+
+      // Legs & Combat Boots
+      const lLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.13, 0.85, 12), trimMat); lLeg.position.set(-0.18, 0.42, 0); lLeg.castShadow = true;
+      const rLeg = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.13, 0.85, 12), trimMat); rLeg.position.set(0.18, 0.42, 0); rLeg.castShadow = true;
+      const lBoot = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.36), bootMat); lBoot.position.set(-0.18, 0.09, 0.08); lBoot.castShadow = true;
+      const rBoot = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.18, 0.36), bootMat); rBoot.position.set(0.18, 0.09, 0.08); rBoot.castShadow = true;
+
+      // Arms & Rifle
+      const lArm = new THREE.Group(); lArm.position.set(-0.36, 1.34, 0); lArm.rotation.x = -0.9; lArm.rotation.y = 0.5;
+      const lArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.11, 0.65, 12), bodyMat); lArmMesh.position.z = -0.32; lArm.add(lArmMesh);
+      const rArm = new THREE.Group(); rArm.position.set(0.36, 1.34, 0); rArm.rotation.x = -1.1; rArm.rotation.y = -0.35;
+      const rArmMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.11, 0.65, 12), bodyMat); rArmMesh.position.z = -0.32; rArm.add(rArmMesh);
+
+      // Detailed Assault Rifle held by Soldier
+      const rifle = new THREE.Group(); rifle.position.set(0.06, 1.22, 0.32); rifle.rotation.y = -0.15;
+      const rBody = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.12, 0.95), metalMat); rBody.position.set(0, 0, -0.2);
+      const rMag = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.26, 0.10), metalMat); rMag.position.set(0, -0.16, -0.05); rMag.rotation.x = 0.2;
+      const rBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.65, 8), metalMat); rBarrel.position.set(0, 0.01, -0.85); rBarrel.rotation.x = Math.PI/2;
+      const rScope = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.09, 0.22), metalMat); rScope.position.set(0, 0.10, -0.25);
+      const rScopeLens = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 8), goggleLensMat); rScopeLens.position.set(0, 0.10, -0.36);
+      rifle.add(rBody, rMag, rBarrel, rScope, rScopeLens);
+
+      body.add(torso, pelvis, headPivot, lLeg, rLeg, lBoot, rBoot, lArm, rArm, rifle);
+      soldier.add(body);
+      scene.add(soldier);
+
+      // Floating Ember Particles
+      const particleCount = 60;
+      const particleGeo = new THREE.BufferGeometry();
+      const particlePos = new Float32Array(particleCount * 3);
+      for(let i=0; i<particleCount*3; i+=3) {
+        particlePos[i] = (Math.random() - 0.5) * 10;
+        particlePos[i+1] = Math.random() * 5;
+        particlePos[i+2] = (Math.random() - 0.5) * 10;
+      }
+      particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePos, 3));
+      const particleMat = new THREE.PointsMaterial({ color: 0xff8800, size: 0.06, transparent: true, opacity: 0.75 });
+      const particles = new THREE.Points(particleGeo, particleMat);
+      scene.add(particles);
+
+      // Mouse Look Interaction
+      let mouseX = 0, mouseY = 0;
+      window.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+        mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+      });
+
+      // Animation Loop
+      let clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+
+        // Subtle Soldier Idle Breathing & Mouse Track
+        soldier.position.y = Math.sin(t * 1.8) * 0.015;
+        headPivot.rotation.y = mouseX * 0.25;
+        headPivot.rotation.x = mouseY * 0.15;
+        soldier.rotation.y = mouseX * 0.12;
+
+        // Floating Embers Motion
+        const positions = particleGeo.attributes.position.array;
+        for (let i = 1; i < particleCount * 3; i += 3) {
+          positions[i] += 0.008;
+          if (positions[i] > 5) positions[i] = 0;
+        }
+        particleGeo.attributes.position.needsUpdate = true;
+
+        renderer.render(scene, camera);
+      }
+      animate();
+
+      // Window Resize Handler
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Modals Logic
+      const controlsModal = document.getElementById('controlsModal');
+      const loadoutModal = document.getElementById('loadoutModal');
+
+      document.getElementById('openControls').addEventListener('click', () => controlsModal.style.display = 'flex');
+      document.getElementById('closeControls').addEventListener('click', () => controlsModal.style.display = 'none');
+
+      document.getElementById('openLoadout').addEventListener('click', () => loadoutModal.style.display = 'flex');
+      document.getElementById('closeLoadout').addEventListener('click', () => loadoutModal.style.display = 'none');
+
+      document.querySelectorAll('.weapon-card').forEach(card => {
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.weapon-card').forEach(c => c.classList.remove('active'));
+          card.classList.add('active');
+        });
+      });
+    </script>
   </body>
 </html>

@@ -60,14 +60,26 @@
   .orientation-box h2 { margin:0 0 10px; color:#c9f24d; font-size:24px; }
   .orientation-box p { margin:0 0 16px; line-height:1.7; color:#9fb0bf; }
   .orientation-box button { margin-top:0; }
-  .touch-controls { position:fixed; inset:auto 0 0 0; display:none; justify-content:space-between; align-items:flex-end; padding:18px; z-index:20; pointer-events:none; }
+  .touch-controls { position:fixed; inset:0; display:none; justify-content:space-between; align-items:flex-end; padding:16px 14px 22px; z-index:20; pointer-events:none; }
   .touch-controls.visible { display:flex; }
-  .touch-controls button { pointer-events:auto; border:none; border-radius:999px; background:rgba(10,14,18,.75); color:#f5f7fb; border:1px solid rgba(201,242,77,.24); box-shadow:0 10px 30px rgba(0,0,0,.28); }
-  .touch-pad { display:grid; grid-template-columns:repeat(2, 56px); gap:10px; }
-  .touch-pad .move-btn { width:56px; height:56px; font-size:22px; }
-  .touch-actions { display:grid; grid-template-columns:repeat(2, 74px); gap:10px; }
-  .touch-actions .action-btn { width:74px; height:74px; font-size:13px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
-  .touch-look { position:fixed; inset:0 0 0 0; z-index:15; pointer-events:none; }
+  .joystick-zone { position:relative; width:150px; height:150px; pointer-events:auto; flex-shrink:0; align-self:flex-end; }
+  .joystick-base { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:130px; height:130px; border-radius:50%; background:rgba(10,14,18,.4); border:2px solid rgba(201,242,77,.18); box-shadow:inset 0 0 20px rgba(0,0,0,.3); }
+  .joystick-base::after { content:''; position:absolute; inset:8px; border-radius:50%; border:1px solid rgba(201,242,77,.08); }
+  .joystick-thumb { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:56px; height:56px; border-radius:50%; background:radial-gradient(circle at 38% 36%, rgba(220,255,117,.35), rgba(201,242,77,.12) 70%); border:2px solid rgba(201,242,77,.45); box-shadow:0 4px 16px rgba(0,0,0,.45); transition:box-shadow .12s, border-color .12s; }
+  .joystick-thumb.active { border-color:rgba(201,242,77,.75); box-shadow:0 0 24px rgba(201,242,77,.25), 0 4px 16px rgba(0,0,0,.45); }
+  .touch-actions { display:flex; flex-direction:column; align-items:flex-end; gap:10px; pointer-events:none; align-self:flex-end; }
+  .touch-actions-row { display:flex; gap:10px; align-items:center; }
+  .action-btn { display:flex; align-items:center; justify-content:center; border:none; border-radius:50%; color:#dde5ed; pointer-events:auto; cursor:pointer; padding:0; -webkit-tap-highlight-color:transparent; transition:transform .1s, background .12s, border-color .12s; background:rgba(10,14,18,.55); border:1.5px solid rgba(255,255,255,.12); box-shadow:0 4px 18px rgba(0,0,0,.4); }
+  .action-btn:active, .action-btn.pressed { transform:scale(.9); background:rgba(201,242,77,.2); border-color:rgba(201,242,77,.5); }
+  .action-btn svg { pointer-events:none; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5)); }
+  .btn-fire { width:76px; height:76px; background:rgba(201,242,77,.1); border-color:rgba(201,242,77,.35); }
+  .btn-fire:active, .btn-fire.pressed { background:rgba(255,90,90,.25); border-color:rgba(255,90,90,.55); }
+  .btn-aim { width:60px; height:60px; }
+  .btn-jump { width:56px; height:56px; }
+  .btn-reload { width:50px; height:50px; }
+  .btn-grenade { width:48px; height:48px; }
+  .btn-melee { width:48px; height:48px; }
+  .touch-look { position:fixed; inset:0; z-index:15; pointer-events:none; }
 </style>
 </head>
 <body>
@@ -80,17 +92,22 @@
   </div>
 </div>
 <div id="touchControls" class="touch-controls">
-  <div class="touch-pad">
-    <button class="touch-btn move-btn" data-key="KeyW">▲</button>
-    <button class="touch-btn move-btn" data-key="KeyD">▶</button>
-    <button class="touch-btn move-btn" data-key="KeyA">◀</button>
-    <button class="touch-btn move-btn" data-key="KeyS">▼</button>
+  <div class="joystick-zone" id="joystickZone">
+    <div class="joystick-base" id="joystickBase">
+      <div class="joystick-thumb" id="joystickThumb"></div>
+    </div>
   </div>
   <div class="touch-actions">
-    <button class="touch-btn action-btn" id="touchFire">Fire</button>
-    <button class="touch-btn action-btn" id="touchJump">Jump</button>
-    <button class="touch-btn action-btn" id="touchReload">Reload</button>
-    <button class="touch-btn action-btn" id="touchAim">Aim</button>
+    <button class="action-btn btn-jump" id="touchJump"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="17 14 12 9 7 14"/><line x1="12" y1="9" x2="12" y2="20"/><path d="M5 5h14" stroke-dasharray="2 3"/></svg></button>
+    <div class="touch-actions-row">
+      <button class="action-btn btn-reload" id="touchReload"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg></button>
+      <button class="action-btn btn-aim" id="touchAim"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="1" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="23"/><line x1="1" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="23" y2="12"/></svg></button>
+    </div>
+    <div class="touch-actions-row">
+      <button class="action-btn btn-grenade" id="touchGrenade"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="14" r="7"/><line x1="12" y1="7" x2="12" y2="3"/><line x1="9.5" y1="3.5" x2="14.5" y2="3.5"/><path d="M15 2l1.5 1.5" stroke-width="1.8"/></svg></button>
+      <button class="action-btn btn-melee" id="touchMelee"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 3.5l6 6-9 9-6-6z"/><path d="M5.5 18.5L2 22"/><line x1="15" y1="9" x2="18" y2="6"/></svg></button>
+      <button class="action-btn btn-fire" id="touchFire"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#c9f24d" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="2.5"/><line x1="12" y1="2" x2="12" y2="7"/><line x1="12" y1="17" x2="12" y2="22"/><line x1="2" y1="12" x2="7" y2="12"/><line x1="17" y1="12" x2="22" y2="12"/></svg></button>
+    </div>
   </div>
 </div>
 <div id="touchLook" class="touch-look"></div>
@@ -1082,6 +1099,7 @@ function dmgFlash(){ $('damage').style.opacity=0.9; dmgT=0.25; }
 // ---------- input ----------
 const keys = {};
 const touchMoveState = { active:false, lastX:0, lastY:0 };
+const joystickInput = { x:0, y:0 };
 
 function setKey(code, pressed) {
   keys[code] = pressed;
@@ -1098,24 +1116,59 @@ function pressReload() {
 function bindTouchButton(button, onDown, onUp) {
   button.addEventListener('touchstart', e => { e.preventDefault(); onDown(); }, { passive:false });
   button.addEventListener('touchend', e => { e.preventDefault(); onUp(); }, { passive:false });
+  button.addEventListener('touchcancel', e => { e.preventDefault(); onUp(); }, { passive:false });
   button.addEventListener('mousedown', () => onDown());
   button.addEventListener('mouseup', () => onUp());
   button.addEventListener('mouseleave', () => onUp());
 }
 
-for (const btn of document.querySelectorAll('.touch-btn[data-key]')) {
-  const code = btn.getAttribute('data-key');
-  btn.addEventListener('touchstart', e => { e.preventDefault(); setKey(code, true); }, { passive:false });
-  btn.addEventListener('touchend', e => { e.preventDefault(); setKey(code, false); }, { passive:false });
-  btn.addEventListener('mousedown', () => setKey(code, true));
-  btn.addEventListener('mouseup', () => setKey(code, false));
-  btn.addEventListener('mouseleave', () => setKey(code, false));
+// --- Virtual Joystick ---
+{
+  const zone = document.getElementById('joystickZone');
+  const base = document.getElementById('joystickBase');
+  const thumb = document.getElementById('joystickThumb');
+  let joyTouchId = null;
+  const RADIUS = 50;
+
+  function updateStick(touch) {
+    const rect = base.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    let dx = touch.clientX - cx;
+    let dy = touch.clientY - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > RADIUS) { dx = dx / dist * RADIUS; dy = dy / dist * RADIUS; }
+    thumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+    joystickInput.x = dx / RADIUS;
+    joystickInput.y = dy / RADIUS;
+  }
+  function resetStick() {
+    joyTouchId = null;
+    joystickInput.x = 0; joystickInput.y = 0;
+    thumb.style.transform = 'translate(-50%,-50%)';
+    thumb.classList.remove('active');
+  }
+  zone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    const t = e.changedTouches[0];
+    joyTouchId = t.identifier;
+    thumb.classList.add('active');
+    updateStick(t);
+  }, { passive:false });
+  zone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) { if (t.identifier === joyTouchId) { updateStick(t); break; } }
+  }, { passive:false });
+  zone.addEventListener('touchend', e => { for (const t of e.changedTouches) { if (t.identifier === joyTouchId) { resetStick(); break; } } });
+  zone.addEventListener('touchcancel', resetStick);
 }
 
 bindTouchButton(document.getElementById('touchFire'), () => { firing = true; }, () => { firing = false; });
 bindTouchButton(document.getElementById('touchAim'), () => { aiming = true; }, () => { aiming = false; });
 bindTouchButton(document.getElementById('touchJump'), () => { pressJump(); }, () => {});
 bindTouchButton(document.getElementById('touchReload'), () => { pressReload(); }, () => {});
+bindTouchButton(document.getElementById('touchGrenade'), () => { throwGrenade(); }, () => {});
+bindTouchButton(document.getElementById('touchMelee'), () => { quickMelee(); }, () => {});
 
 touchLook.addEventListener('touchstart', e => {
   if(!isTouchDevice) return;
@@ -1488,6 +1541,10 @@ function update(dt){
     if(keys['KeyS']) move.sub(fwd);
     if(keys['KeyD']) move.add(right);
     if(keys['KeyA']) move.sub(right);
+    if(Math.abs(joystickInput.x) > 0.12 || Math.abs(joystickInput.y) > 0.12){
+      move.add(fwd.clone().multiplyScalar(-joystickInput.y));
+      move.add(right.clone().multiplyScalar(joystickInput.x));
+    }
     const moving = move.lengthSq() > 0;
     if(moving){ move.normalize().multiplyScalar(speed*dt); bob += dt*(sprint>1?14:9); }
     // health regeneration while holding still and not recently hit
@@ -1785,13 +1842,15 @@ function drawMap(){
 $('startStory').addEventListener('click', () => {
   storyState.mode = 'story';
   $('overlay').style.display = 'none';
-  renderer.domElement.requestPointerLock();
+  if(isTouchDevice) { touchLook.style.pointerEvents = 'auto'; touchControls.classList.add('visible'); }
+  else renderer.domElement.requestPointerLock();
   if(!started){ started = true; startStoryMode(); }
 });
 $('startSurvival').addEventListener('click', () => {
   storyState.mode = 'freeplay';
   $('overlay').style.display = 'none';
-  renderer.domElement.requestPointerLock();
+  if(isTouchDevice) { touchLook.style.pointerEvents = 'auto'; touchControls.classList.add('visible'); }
+  else renderer.domElement.requestPointerLock();
   if(!started){ started = true; startWave(); hud(); }
 });
 document.addEventListener('pointerlockchange', () => {

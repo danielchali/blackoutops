@@ -410,6 +410,7 @@ function createHouse(x,z,width=12,depth=8,height=6) {
   return g;
 }
 
+const destructibles = [];
 function createCar(x,z) {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(3.4, 1.1, 1.7), new THREE.MeshStandardMaterial({ color:0x223346, roughness:0.7, metalness:0.4 }));
@@ -762,7 +763,6 @@ WEAPONS.forEach(w => {
 });
 WEAPONS.forEach(w => { w.inMag = w.mag; w.reserve = w.res; });
 let cur = 1, lastShot = 0, reloading = false, recoilKick = 0, swayT = 0, screenShake = 0;
-const destructibles = [];
 
 // viewmodel
 const vm = new THREE.Group();

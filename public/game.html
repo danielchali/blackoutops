@@ -428,6 +428,10 @@ function createCar(x,z) {
   scene.add(g);
   colliders.push(new THREE.Box3().setFromObject(g));
   worldMeshes.push(body);
+  const carData = { obj: g, hp: 250, dead: false };
+  destructibles.push(carData);
+  body.userData.destructible = carData;
+  roof.userData.destructible = carData;
   return g;
 }
 
@@ -757,7 +761,8 @@ WEAPONS.forEach(w => {
   if(w.adsFov === undefined) w.adsFov = w.sniper ? 22 : 56;
 });
 WEAPONS.forEach(w => { w.inMag = w.mag; w.reserve = w.res; });
-let cur = 1, lastShot = 0, reloading = false, recoilKick = 0, swayT = 0;
+let cur = 1, lastShot = 0, reloading = false, recoilKick = 0, swayT = 0, screenShake = 0;
+const destructibles = [];
 
 // viewmodel
 const vm = new THREE.Group();
@@ -782,28 +787,50 @@ function buildGun(i){
     h.position.set(x,y,z); h.rotation.z = rz; h.rotation.x = rx;
     g.add(h); return h;
   };
-  if(i===0){ add(0.09,0.11,0.42,0,0,-0.16,dark); add(0.07,0.19,0.09,0,-0.14,0.02,grey);
-             hand(0.02,-0.15,0.05,-0.12,0.30,1); hand(-0.11,-0.20,0.02,0.55,0.30,-1); }
-  if(i===1){ add(0.08,0.09,0.80,0,0,-0.30,dark); add(0.07,0.16,0.10,0,-0.12,0.05,grey);
-             add(0.06,0.12,0.22,0,-0.02,0.20,dark); add(0.05,0.05,0.26,0,0.07,-0.20,grey);
-             hand(0.02,-0.13,0.08,-0.10,0.28,1); hand(-0.06,-0.14,-0.42,0.75,0.05,-1); }
-  if(i===2){ add(0.10,0.11,0.86,0,0,-0.32,dark); add(0.08,0.07,0.50,0,-0.09,-0.24,grey);
-             add(0.08,0.17,0.24,0,-0.10,0.14,wood); hand(0.02,-0.13,0.16,-0.10,0.26,1);
-             hand(-0.07,-0.15,-0.40,0.8,0.05,-1); }
-  if(i===3){ const b=add(0.02,0.10,0.44,0,0.02,-0.20,mkMat(0xb9c4cc,0.95)); b.rotation.x=0.06;
-             add(0.05,0.06,0.16,0,-0.02,0.06,mkMat(0x1d1f22,0.2));
-             hand(0.0,-0.03,0.10,-0.05,0.20,1); }
-  if(i===4){ add(0.09,0.11,1.05,0,0,-0.42,dark);                       // receiver
-             add(0.045,0.045,0.55,0,0.01,-1.05,grey);                  // long barrel
-             add(0.07,0.10,0.30,0,-0.09,0.28,wood);                    // stock
-             add(0.07,0.13,0.10,0,-0.11,0.06,grey);                    // grip
-             add(0.06,0.16,0.08,0,-0.13,-0.20,dark);                   // mag
-             const sc = add(0.075,0.075,0.44,0,0.11,-0.30,mkMat(0x14181b,0.4)); // scope tube
-             add(0.10,0.10,0.06,0,0.11,-0.52,mkMat(0x0b0e10,0.4));      // objective
-             add(0.045,0.06,0.05,0,0.05,-0.18,grey); add(0.045,0.06,0.05,0,0.05,-0.42,grey); // rings
-             add(0.05,0.05,0.20,0,-0.14,-0.62,grey);                    // bipod stub
-             sc.name='scope';
-             hand(0.02,-0.14,0.06,-0.10,0.28,1); hand(-0.06,-0.15,-0.52,0.75,0.05,-1); }
+  if(i===0){ // M9 Pistol
+    add(0.09,0.11,0.42,0,0,-0.16,dark); add(0.07,0.19,0.09,0,-0.14,0.02,grey); // slide & grip
+    add(0.02,0.04,0.04,0,0.06,-0.35,grey); // front sight
+    add(0.06,0.04,0.02,0,0.06,-0.02,grey); // rear sight
+    add(0.08,0.02,0.25,0,-0.05,-0.15,grey); // trigger guard
+    hand(0.02,-0.15,0.05,-0.12,0.30,1); hand(-0.11,-0.20,0.02,0.55,0.30,-1); 
+  }
+  if(i===1){ // AR-15 Rifle
+    add(0.08,0.09,0.80,0,0,-0.30,dark); add(0.07,0.16,0.10,0,-0.12,0.05,grey); // receiver & grip
+    add(0.06,0.12,0.22,0,-0.02,0.20,dark); add(0.05,0.05,0.26,0,0.07,-0.20,grey); // stock & rail
+    add(0.09,0.09,0.45,0,0,-0.65,dark); // handguard
+    add(0.03,0.03,0.55,0,0,-0.95,grey); // barrel
+    add(0.05,0.05,0.10,0,0,-1.25,dark); // muzzle brake
+    add(0.02,0.08,0.40,0,0.08,-0.45,dark); // carry handle
+    hand(0.02,-0.13,0.08,-0.10,0.28,1); hand(-0.06,-0.14,-0.42,0.75,0.05,-1); 
+  }
+  if(i===2){ // Shotgun
+    add(0.10,0.11,0.86,0,0,-0.32,dark); add(0.08,0.07,0.50,0,-0.09,-0.24,grey); // receiver & tube
+    add(0.08,0.17,0.24,0,-0.10,0.14,wood); // stock
+    add(0.11,0.11,0.35,0,-0.05,-0.55,wood); // pump handle
+    add(0.06,0.06,0.65,0,0.04,-0.85,grey); // barrel
+    hand(0.02,-0.13,0.16,-0.10,0.26,1); hand(-0.07,-0.15,-0.40,0.8,0.05,-1); 
+  }
+  if(i===3){ // Knife
+    const b=add(0.02,0.10,0.44,0,0.02,-0.20,mkMat(0xb9c4cc,0.95)); b.rotation.x=0.06;
+    add(0.06,0.06,0.02,0,0.02,-0.02,dark); // guard
+    add(0.05,0.06,0.16,0,-0.02,0.06,mkMat(0x1d1f22,0.2)); // handle
+    hand(0.0,-0.03,0.10,-0.05,0.20,1); 
+  }
+  if(i===4){ // M82 Sniper
+    add(0.09,0.11,1.05,0,0,-0.42,dark);                       // receiver
+    add(0.045,0.045,0.85,0,0.01,-1.25,grey);                  // long barrel
+    add(0.08,0.08,0.15,0,0.01,-1.70,dark);                    // large muzzle brake
+    add(0.07,0.10,0.30,0,-0.09,0.28,wood);                    // stock
+    add(0.07,0.13,0.10,0,-0.11,0.06,grey);                    // grip
+    add(0.06,0.16,0.08,0,-0.13,-0.20,dark);                   // mag
+    const sc = add(0.075,0.075,0.44,0,0.11,-0.30,mkMat(0x14181b,0.4)); // scope tube
+    add(0.10,0.10,0.06,0,0.11,-0.52,mkMat(0x0b0e10,0.4));      // objective
+    add(0.045,0.06,0.05,0,0.05,-0.18,grey); add(0.045,0.06,0.05,0,0.05,-0.42,grey); // rings
+    add(0.02,0.15,0.02,0.08,0.05,-0.35,grey); // bolt handle
+    add(0.05,0.05,0.20,0,-0.14,-0.62,grey);                    // bipod stub
+    sc.name='scope';
+    hand(0.02,-0.14,0.06,-0.10,0.28,1); hand(-0.06,-0.15,-0.52,0.75,0.05,-1); 
+  }
   g.position.set(0.26,-0.24,-0.5); g.scale.setScalar(0.55);
 
   g.visible = false;
@@ -852,12 +879,20 @@ function spawnEnemy(t){
   // Neck - thin cylinder
   const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.09,0.16,8), trimMat); neck.position.y=1.58; neck.castShadow=true;
   
-  // Head - sphere with helmet
+  // Head - sphere with helmet and human details
   const headPivot = new THREE.Group(); headPivot.position.set(0,1.82,0);
   const skull = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 12), skinMat); skull.position.y=0.08; skull.castShadow=true;
   const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 12), trimMat); helmet.position.y=0.16; helmet.castShadow=true;
   const nvg = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), metal); nvg.position.set(0, 0.18, 0.18); nvg.castShadow=true; headPivot.add(nvg);
-  const face = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), new THREE.MeshStandardMaterial({ color:0x1b1e22, roughness:0.6 })); face.position.set(0,0.06,0.16); face.castShadow=true;
+  
+  // Eyes
+  const eyeMat = new THREE.MeshBasicMaterial({ color:0x111111 });
+  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), eyeMat); eyeL.position.set(-0.06, 0.08, 0.16);
+  const eyeR = new THREE.Mesh(new THREE.SphereGeometry(0.02, 6, 6), eyeMat); eyeR.position.set(0.06, 0.08, 0.16);
+  headPivot.add(eyeL, eyeR);
+
+  // Balaclava / Face mask
+  const face = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), new THREE.MeshStandardMaterial({ color:0x1b1e22, roughness:0.6 })); face.position.set(0,0.04,0.16); face.castShadow=true;
   headPivot.add(skull, helmet, face);
 
   // Legs - cylinders for limbs
@@ -877,13 +912,21 @@ function spawnEnemy(t){
   const lElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), bodyMat); lElbowJoint.position.z=-0.56; lElbowJoint.castShadow=true; lUpperArm.add(lElbowJoint);
   const lLowerArm = new THREE.Group(); lLowerArm.position.set(0,0,-0.56);
   const lLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.5, 12), bodyMat); lLowerArmMeshLocal.position.z=-0.24; lLowerArmMeshLocal.castShadow=true; lLowerArm.add(lLowerArmMeshLocal);
-  const lHand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), skinMat); lHand.position.z=-0.48; lHand.castShadow=true; lLowerArm.add(lHand);
+  const lHand = new THREE.Group(); lHand.position.z=-0.48;
+  const lPalm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.14), skinMat); lPalm.castShadow=true; lHand.add(lPalm);
+  const lThumb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.06), skinMat); lThumb.position.set(0.07, 0, 0.02); lHand.add(lThumb);
+  lLowerArm.add(lHand);
+
   const rUpperArm = new THREE.Group(); rUpperArm.position.set(0.34,1.28,0);
   const rUpperArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.56, 12), bodyMat); rUpperArmMeshLocal.position.z=-0.28; rUpperArmMeshLocal.castShadow=true; rUpperArm.add(rUpperArmMeshLocal);
   const rElbowJoint = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), bodyMat); rElbowJoint.position.z=-0.56; rElbowJoint.castShadow=true; rUpperArm.add(rElbowJoint);
   const rLowerArm = new THREE.Group(); rLowerArm.position.set(0,0,-0.56);
   const rLowerArmMeshLocal = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.5, 12), bodyMat); rLowerArmMeshLocal.position.z=-0.24; rLowerArmMeshLocal.castShadow=true; rLowerArm.add(rLowerArmMeshLocal);
-  const rHand = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), skinMat); rHand.position.z=-0.48; rHand.castShadow=true; rLowerArm.add(rHand);
+  
+  const rHand = new THREE.Group(); rHand.position.z=-0.48;
+  const rPalm = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.06, 0.14), skinMat); rPalm.castShadow=true; rHand.add(rPalm);
+  const rThumb = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.03, 0.06), skinMat); rThumb.position.set(-0.07, 0, 0.02); rHand.add(rThumb);
+  rLowerArm.add(rHand);
   const shoulderPad = new THREE.Mesh(new THREE.SphereGeometry(0.14, 8, 8), trimMat); shoulderPad.position.set(-0.34,1.36,0); shoulderPad.castShadow=true; body.add(shoulderPad);
 
   const gunG = new THREE.Group(); gunG.position.set(0.12,1.18,-0.42);
@@ -924,7 +967,7 @@ function spawnEnemy(t){
   const lLowerArmMeshRef = lLowerArm.children[0];
   body.add(torso, chest, pelvis, neck, headPivot, lUpperLeg, rUpperLeg, lLowerLeg, rLowerLeg, lUpperArm, rUpperArm, lLowerArm, rLowerArm, gunG);
   g.add(body);
-  [torso,pelvis,neck,skull,helmet,lUpperLegMeshRef,lLowerLegMeshRef,rUpperLegMesh,rLowerLegMesh,lUpperArmMeshRef,lLowerArmMeshRef,rUpperArmMesh,rLowerArmMesh,lHand,rHand].forEach(m=>{ if(m) m.castShadow=true; });
+  [torso,pelvis,neck,skull,helmet,lUpperLegMeshRef,lLowerLegMeshRef,rUpperLegMesh,rLowerLegMesh,lUpperArmMeshRef,lLowerArmMeshRef,rUpperArmMesh,rLowerArmMesh,lPalm,rPalm].forEach(m=>{ if(m) m.castShadow=true; });
 
   let a; do { a = Math.random()*Math.PI*2; } while(false);
   const dist = 45 + Math.random()*35;
@@ -1277,15 +1320,53 @@ function throwGrenade(){
   flash('Grenade thrown');
 }
 
+function explosionFX(pos, scale=1){
+  const burst = new THREE.Mesh(new THREE.SphereGeometry(0.8*scale, 12, 12), new THREE.MeshBasicMaterial({ color:0xffb347, transparent:true, opacity:0.8 }));
+  burst.position.copy(pos); scene.add(burst); decals.push({ o:burst, t:0.25 });
+  
+  // Smoke and fire particles
+  for(let i=0; i<15; i++){
+    const col = Math.random() > 0.4 ? 0xff6600 : 0x444444;
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.15*scale, 6, 6), new THREE.MeshBasicMaterial({ color:col, transparent:true, opacity:0.8 }));
+    s.position.copy(pos);
+    const v = new THREE.Vector3((Math.random()-0.5)*8*scale, (Math.random())*6*scale, (Math.random()-0.5)*8*scale);
+    scene.add(s); decals.push({ o:s, t:0.8 + Math.random()*0.4, v });
+  }
+  
+  const dist = player.pos.distanceTo(pos);
+  if(dist < 20) screenShake = Math.max(screenShake, (1 - dist/20) * 0.15 * scale);
+}
+
 function explodeGrenade(grenade){
   const pos = grenade.obj.position;
-  const burst = new THREE.Mesh(new THREE.SphereGeometry(0.8, 10, 10), new THREE.MeshBasicMaterial({ color:0xffb347, transparent:true, opacity:0.6 }));
-  burst.position.copy(pos); scene.add(burst); decals.push({ o:burst, t:0.18 });
+  explosionFX(pos);
+  
   for(const e of enemies){
     if(e.dead) continue;
-    if(e.obj.position.distanceTo(pos) < 6){ e.hp -= 70; if(e.hp <= 0) killEnemy(e, false); }
+    if(e.obj.position.distanceTo(pos) < 6.5){ e.hp -= 85; if(e.hp <= 0) killEnemy(e, false); }
   }
-  if(player.pos.distanceTo(pos) < 6){ player.hp = Math.max(0, player.hp - 35); player.regenT = 3; dmgFlash(); }
+  
+  for(const d of destructibles){
+    if(d.dead) continue;
+    if(d.obj.position.distanceTo(pos) < 7){ d.hp -= 120; if(d.hp <= 0) explodeDestructible(d); }
+  }
+
+  if(player.pos.distanceTo(pos) < 6.5){ player.hp = Math.max(0, player.hp - 45); player.regenT = 3.5; dmgFlash(); }
+  hud();
+}
+
+function explodeDestructible(d){
+  if(d.dead) return;
+  d.dead = true;
+  explosionFX(d.obj.position, 2.5);
+  d.obj.traverse(o => { if(o.material) { o.material = o.material.clone(); o.material.color.set(0x111111); } });
+  
+  // Massive damage to nearby things
+  const pos = d.obj.position;
+  for(const e of enemies){
+    if(!e.dead && e.obj.position.distanceTo(pos) < 9){ e.hp -= 200; if(e.hp <= 0) killEnemy(e, false); }
+  }
+  if(player.pos.distanceTo(pos) < 9){ player.hp = Math.max(0, player.hp - 80); player.regenT = 4; dmgFlash(); }
   hud();
 }
 
@@ -1427,6 +1508,13 @@ function update(dt){
   camera.position.copy(player.pos);
   camera.position.y += Math.sin(bob)*0.045;
   camera.position.x += Math.cos(bob*0.5)*0.02;
+  
+  if(screenShake > 0.001){
+    camera.position.x += (Math.random()-0.5) * screenShake;
+    camera.position.y += (Math.random()-0.5) * screenShake;
+    camera.position.z += (Math.random()-0.5) * screenShake;
+    screenShake *= Math.pow(0.0001, dt);
+  }
 
   // firing
   firePressedEdge = firing && !wasFiring;

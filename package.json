@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "PORT=8080 node serve.js",
     "start": "node serve.js",
-    "build": "echo \"static site - no build step required\"",
-    "build:dev": "echo \"static site - no build step required\"",
-    "preview": "node serve.js"
+    "build": "node build.js",
+    "build:dev": "node build.js",
+    "preview": "node serve.js",
+    "typecheck": "echo \"no typescript sources\""
   }
 }

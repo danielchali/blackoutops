@@ -1,0 +1,13 @@
+{
+  "name": "fps-game",
+  "private": true,
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "PORT=8080 node serve.js",
+    "start": "node serve.js",
+    "build": "echo \"static site - no build step required\"",
+    "build:dev": "echo \"static site - no build step required\"",
+    "preview": "node serve.js"
+  }
+}

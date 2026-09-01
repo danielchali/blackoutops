@@ -2195,6 +2195,7 @@ $('startStory').addEventListener('click', () => {
   if(!started){ started = true; startStoryMode(); }
 });
 $('startSurvival').addEventListener('click', () => {
+  sfx.unlock();
   storyState.mode = 'freeplay';
   $('overlay').style.display = 'none';
   if(isTouchDevice || 'ontouchstart' in window) { enableTouchUI(); }

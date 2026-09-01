@@ -1476,11 +1476,11 @@ function setZoom(i){
   
 }
 
-function swap(i){ if(i===cur||dead) return; aiming = false; gunMeshes[cur].visible=false; cur=i; gunMeshes[i].visible=true; reloading=false; swayT=0.35; hud(); }
+function swap(i){ if(i===cur||dead) return; aiming = false; gunMeshes[cur].visible=false; cur=i; gunMeshes[i].visible=true; reloading=false; swayT=0.35; sfx.swap(); hud(); }
 function reload(){
   const w = WEAPONS[cur];
   if(w.melee || reloading || w.inMag===w.mag || w.reserve<=0) return;
-  reloading = true; hud();
+  reloading = true; sfx.reload(); hud();
   setTimeout(()=>{
     const need = Math.min(w.mag - w.inMag, w.reserve);
     w.inMag += need; w.reserve -= need; reloading = false; hud();
@@ -1490,6 +1490,7 @@ let meleeAnim = 0;
 function quickMelee(){
   if(meleeAnim>0 || dead) return;
   meleeAnim = 0.36;
+  sfx.swing();
   hitScan(WEAPONS[3], true);
 }
 
@@ -1527,7 +1528,7 @@ function hitScan(w, isMelee){
       if(e && !e.dead){
         const headshot = h.object === e.headPivot.children[0] || h.object === e.headPivot.children[1];
         e.hp -= w.dmg * (headshot?2.5:1);
-        bloodPuff(h.point); hitmark(); end = h.point;
+        bloodPuff(h.point); hitmark(); sfx.hit(headshot); end = h.point;
         if(e.hp<=0) killEnemy(e, headshot);
       }
     }
@@ -1575,10 +1576,11 @@ function collectPickup(p){
     flash('+' + amt + ' ' + w.name + ' ammo');
   }
   scene.remove(p.obj);
+  sfx.pickup();
   hud();
 }
 function killEnemy(e, hs){
-  e.dead = true; kills++;
+  e.dead = true; kills++; sfx.kill();
   e.obj.rotation.x = -Math.PI/2.1; e.obj.position.y = 0.2;
   e.obj.traverse(o => { if(o.material){ o.material = o.material.clone(); o.material.transparent = true; } });
   e.fadeT = 3;
@@ -1614,10 +1616,13 @@ function throwGrenade(){
   
   const grenade = { obj:g, life:2.2, kind:'grenade' };
   pickups.push(grenade);
+  sfx.throwPin();
   flash('Grenade thrown (' + storyState.grenadeCount + ' left)');
 }
 
 function explosionFX(pos, scale=1){
+  const exDist = player.pos ? player.pos.distanceTo(pos) : 0;
+  sfx.explosion(scale * Math.max(0.15, 1 - exDist/90));
   // 1. High-intensity flash point light
   const flashLight = new THREE.PointLight(0xffaa22, 25 * scale, 35 * scale);
   flashLight.position.copy(pos); flashLight.position.y += 0.6;

@@ -1295,7 +1295,7 @@ function flash(t){ $('msg').textContent=t; $('msg').style.opacity=1; msgT=2.4; }
 let hitT=0;
 function hitmark(){ $('hitmark').style.opacity=1; hitT=0.12; }
 let dmgT=0;
-function dmgFlash(){ $('damage').style.opacity=0.9; dmgT=0.25; }
+function dmgFlash(){ $('damage').style.opacity=0.9; dmgT=0.25; sfx.hurt(); }
 
 // ---------- input ----------
 const keys = {};
@@ -1734,9 +1734,10 @@ function tryFire(dt){
   const now = performance.now()/1000;
   if(now - lastShot < 60/w.rpm) return;
   if(!w.auto && !firePressedEdge) return;
-  if(w.melee){ lastShot=now; meleeAnim=0.32; hitScan(w,true); return; }
+  if(w.melee){ lastShot=now; meleeAnim=0.32; sfx.swing(); hitScan(w,true); return; }
   if(w.inMag<=0){ if(firePressedEdge) reload(); return; }
   lastShot = now; w.inMag--;
+  sfx.shot(cur);
   hitScan(w,false);
   const rmul = 1 - adsT*0.4;
   recoilKick += w.recoil * rmul;

@@ -1188,6 +1188,7 @@ function startWave(){
     spawnEnemy(wave>=3 && roll>0.75 ? 1 : roll>0.5 ? 2 : 0);
   }
   flash('Wave ' + wave + ' — ' + n + ' hostiles');
+  sfx.wave();
 }
 
 function startStoryEncounter(){
@@ -1942,6 +1943,7 @@ function update(dt){
     }
     if(dist < e.range && e.cd <= 0 && !dead && hasLOS(e.obj.position.clone().setY(1.3), player.pos.clone())){
       e.cd = e.fire;
+      sfx.enemyShot(dist);
       const acc = Math.max(0.25, 1 - dist/e.range*0.55);
       if(Math.random() < acc){
         player.hp -= e.dmg; player.regenT = 3.5; player.still = 0; dmgFlash();
@@ -2100,7 +2102,7 @@ function update(dt){
 }
 
 function gameOver(){
-  dead = true; player.hp = 0; hud();
+  dead = true; player.hp = 0; hud(); sfx.gameOver();
   document.exitPointerLock();
   const o = $('overlay');
   o.style.display = 'flex';
@@ -2185,6 +2187,7 @@ window.addEventListener('touchstart', () => {
 }, { passive: true });
 
 $('startStory').addEventListener('click', () => {
+  sfx.unlock();
   storyState.mode = 'story';
   $('overlay').style.display = 'none';
   if(isTouchDevice || 'ontouchstart' in window) { enableTouchUI(); }

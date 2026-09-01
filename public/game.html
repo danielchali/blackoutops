@@ -876,6 +876,7 @@ const sfx = (() => {
     footstep(){ noise(0.06, { freq:500, gain:0.07, slide:150 }); }
   };
 })();
+window.__sfx = sfx;
 
 // viewmodel
 const vm = new THREE.Group();

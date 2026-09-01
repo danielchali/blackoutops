@@ -1,4 +1,0 @@
-[run]
-dev = "PORT=8080 node serve.js"
-"build:dev" = "echo static site - no build step"
-build = "echo static site - no build step"

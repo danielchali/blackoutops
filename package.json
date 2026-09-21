@@ -1,0 +1,10 @@
+{
+  "name": "pixel-fury-blackout-ops",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node serve.js",
+    "build:dev": "node --check serve.js",
+    "build": "node --check serve.js"
+  }
+}

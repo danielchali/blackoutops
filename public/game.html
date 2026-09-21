@@ -1847,6 +1847,7 @@ function updateMission(dt){
 }
 
 function update(dt){
+  if(tacticalMapOpen){ drawWorldMap(); return; }
   // camera orientation
   camera.rotation.set(0,0,0,'YXZ');
   camera.rotation.order = 'YXZ';
@@ -2314,7 +2315,7 @@ $('startSurvival').addEventListener('click', () => {
   if(!started){ started = true; startWave(); hud(); }
 });
 document.addEventListener('pointerlockchange', () => {
-  if(document.pointerLockElement !== renderer.domElement && started && !dead){
+  if(document.pointerLockElement !== renderer.domElement && started && !dead && !tacticalMapOpen){
     $('overlay').style.display = 'flex';
     $('overlay').querySelector('.box').innerHTML =
       '<h1>PAUSED</h1><p>Wave ' + wave + ' · ' + kills + ' kills</p>' +

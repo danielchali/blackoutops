@@ -1017,8 +1017,29 @@ const ENEMY_TYPES = [
   { c:0x2f5f8f, hp:170, spd:2.3, dmg:16, range:16, fire:1.6, name:'Heavy', skin:0xb68a57, gear:0x5f4a38, accent:0x242a33 },
   { c:0x4e7a3a, hp:70,  spd:4.6, dmg:7,  range:3.0,fire:0.7, name:'Rusher', skin:0xd8a96c, gear:0x3d4a2f, accent:0x1d221c }
 ];
+
+// ---------- dynamic difficulty ----------
+// Scales with the wave you've reached and the kills you've racked up.
+function diffLevel(){
+  return (typeof wave === 'number' ? wave - 1 : 0) + (typeof kills === 'number' ? kills : 0) / 25;
+}
+function difficulty(){
+  const d = diffLevel();
+  return {
+    level: d,
+    hp:    Math.min(3.2,  1 + d * 0.17),   // tougher enemies
+    dmg:   Math.min(2.2,  1 + d * 0.09),   // hit harder
+    spd:   Math.min(1.55, 1 + d * 0.045),  // move faster
+    fire:  Math.max(0.5,  1 - d * 0.055),  // shorter reload between shots
+    range: Math.min(1.5,  1 + d * 0.035),  // engage from further away
+    delay: Math.max(900,  2600 - d * 170), // faster waves
+    drop:  Math.min(1,    1 + d * 0.06)    // more pickups
+  };
+}
+
 function spawnEnemy(t){
   const type = ENEMY_TYPES[t];
+  const D = difficulty();
   const g = new THREE.Group();
   const bodyMat = new THREE.MeshStandardMaterial({ color:type.c, roughness:0.8 });
   const trimMat = new THREE.MeshStandardMaterial({ color:type.accent, roughness:0.9 });

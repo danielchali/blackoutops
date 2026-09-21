@@ -1234,19 +1234,34 @@ function spawnEnemy(t){
   g.position.set(Math.cos(a)*dist, 0, Math.sin(a)*dist);
   scene.add(g);
 
-  const enemy = { obj:g, hp:type.hp, max:type.hp, ...type, body, headPivot, torso, lUpperLeg, lLowerLeg, rUpperLeg, rLowerLeg, lUpperArm, lLowerArm, rUpperArm, rLowerArm, gunG, flash, muzzleLight, flashT:0, muzzleZ, walk:Math.random()*6, cd:Math.random()*2, dead:false, dt:0 };
+  const scaledHp = Math.round(type.hp * D.hp);
+  const enemy = { obj:g, ...type, hp:scaledHp, max:scaledHp,
+    spd:type.spd * D.spd,
+    dmg:Math.round(type.dmg * D.dmg),
+    fire:Math.max(0.22, type.fire * D.fire),
+    range:type.range * D.range,
+    body, headPivot, torso, lUpperLeg, lLowerLeg, rUpperLeg, rLowerLeg, lUpperArm, lLowerArm, rUpperArm, rLowerArm, gunG, flash, muzzleLight, flashT:0, muzzleZ, walk:Math.random()*6, cd:Math.random()*2, dead:false, dt:0 };
   enemies.push(enemy);
   g.traverse(o => { if(o.isMesh) o.userData.enemy = enemy; });
 }
 
 let wave = 1, kills = 0, spawning = false;
+function threatLabel(d){
+  return d < 2 ? 'LOW' : d < 5 ? 'MODERATE' : d < 9 ? 'HIGH' : d < 14 ? 'SEVERE' : 'EXTREME';
+}
 function startWave(){
-  const n = 4 + wave*2;
+  const D = difficulty();
+  const n = Math.min(26, 4 + wave*2 + Math.floor(D.level*0.6));
+  // tougher enemy mix the deeper you get
+  const heavyChance = Math.min(0.42, 0.10 + D.level*0.03);
+  const rusherChance = Math.min(0.45, 0.25 + D.level*0.02);
   for(let i=0;i<n;i++){
     const roll = Math.random();
-    spawnEnemy(wave>=3 && roll>0.75 ? 1 : roll>0.5 ? 2 : 0);
+    if(wave>=2 && roll < heavyChance) spawnEnemy(1);
+    else if(roll < heavyChance + rusherChance) spawnEnemy(2);
+    else spawnEnemy(0);
   }
-  flash('Wave ' + wave + ' — ' + n + ' hostiles');
+  flash('Wave ' + wave + ' — ' + n + ' hostiles · Threat ' + threatLabel(D.level));
   sfx.wave();
 }
 

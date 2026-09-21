@@ -31,6 +31,25 @@
   #minimap { position:absolute; right:24px; top:24px; width:190px; height:190px; padding:0; overflow:hidden; }
   #minimap canvas { display:block; width:190px; height:190px; }
   #minimap .mtag { position:absolute; left:8px; top:6px; font-size:9px; letter-spacing:.2em; color:#8b9aa8; text-transform:uppercase; }
+  #minimap { pointer-events:auto; cursor:pointer; }
+  #worldMap { position:fixed; inset:0; z-index:9; display:none; background:rgba(5,8,10,.96); pointer-events:auto; }
+  #worldMap.open { display:block; }
+  #worldMapCanvas { width:100%; height:100%; cursor:grab; }
+  #worldMapCanvas.dragging { cursor:grabbing; }
+  .map-header { position:absolute; left:24px; top:22px; display:flex; align-items:flex-start; gap:18px; pointer-events:none; text-shadow:0 2px 10px #000; }
+  .map-title { font-size:24px; color:#c9f24d; font-weight:700; letter-spacing:.12em; }
+  .map-subtitle { margin-top:5px; font-size:10px; color:#8b9aa8; letter-spacing:.16em; text-transform:uppercase; }
+  .map-close { position:absolute; right:24px; top:20px; width:44px; height:44px; margin:0; padding:0; border:1px solid rgba(201,242,77,.35); background:rgba(10,14,18,.8); color:#c9f24d; font-size:24px; line-height:1; letter-spacing:0; }
+  .map-legend { position:absolute; left:24px; bottom:24px; width:210px; padding:14px; background:rgba(10,14,18,.84); border:1px solid rgba(201,242,77,.28); }
+  .map-legend-title { margin-bottom:9px; font-size:10px; color:#8b9aa8; letter-spacing:.18em; text-transform:uppercase; }
+  .map-layer { display:flex; align-items:center; gap:9px; min-height:28px; font-size:11px; color:#dce5ec; cursor:pointer; }
+  .map-layer input { accent-color:#c9f24d; }
+  .map-swatch { width:12px; height:12px; border:1px solid rgba(255,255,255,.25); }
+  .map-swatch.buildings { background:#6b7a84; }
+  .map-swatch.cover { background:#b2c0c8; }
+  .map-swatch.enemies { background:#ff5a5a; border-radius:50%; }
+  .map-swatch.pickups { background:#c9f24d; border-radius:50%; }
+  .map-readout { position:absolute; right:24px; bottom:24px; text-align:right; font-size:10px; line-height:1.8; color:#8b9aa8; letter-spacing:.12em; text-transform:uppercase; pointer-events:none; }
   #damage { position:fixed; inset:0; box-shadow: inset 0 0 160px rgba(200,20,20,.9); opacity:0; transition:opacity .3s; pointer-events:none; }
   #overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:radial-gradient(ellipse at center, #131a20 0%, #05070a 100%); text-align:center; z-index:10; }
   #overlay .box { max-width:640px; padding:40px; border:1px solid rgba(201,242,77,.3); background:rgba(8,11,14,.7); }
@@ -95,6 +114,11 @@
     #minimap { width:100px; height:100px; right:8px; top:8px; }
     #minimap canvas { width:100px; height:100px; }
     #minimap .mtag { font-size:7px; }
+    .map-header { left:14px; top:12px; }
+    .map-title { font-size:18px; }
+    .map-close { right:12px; top:10px; }
+    .map-legend { left:12px; bottom:12px; width:170px; padding:10px; }
+    .map-readout { right:12px; bottom:12px; max-width:130px; }
     #msg { font-size:14px; top:16%; letter-spacing:.12em; }
     #missionPanel { left:10px; top:55px; min-width:160px; max-width:55vw; }
     #missionPanel .big { font-size:13px; }
@@ -141,6 +165,19 @@
 <div id="touchLook" class="touch-look"></div>
 <div id="scope"><div class="ring"></div><div class="cx"></div><div class="cy"></div><div class="dot"></div><div class="zoom" id="zoomlvl">4x</div><div class="hint">Scroll / Z to change zoom</div></div>
 <div id="aimIndicator"></div>
+<div id="worldMap" role="dialog" aria-label="World map" aria-hidden="true">
+  <canvas id="worldMapCanvas"></canvas>
+  <div class="map-header"><div><div class="map-title">TACTICAL MAP</div><div class="map-subtitle">Drag to pan · Scroll to zoom</div></div></div>
+  <button class="map-close" id="mapClose" aria-label="Close map" title="Close map">×</button>
+  <div class="map-legend">
+    <div class="map-legend-title">Legend layers</div>
+    <label class="map-layer"><input type="checkbox" data-map-layer="buildings" checked><i class="map-swatch buildings"></i>Buildings</label>
+    <label class="map-layer"><input type="checkbox" data-map-layer="cover" checked><i class="map-swatch cover"></i>Cover</label>
+    <label class="map-layer"><input type="checkbox" data-map-layer="enemies" checked><i class="map-swatch enemies"></i>Enemies</label>
+    <label class="map-layer"><input type="checkbox" data-map-layer="pickups" checked><i class="map-swatch pickups"></i>Pickups</label>
+  </div>
+  <div class="map-readout"><span id="mapZoomReadout">100%</span><br><span>M / Esc close</span></div>
+</div>
 <div id="hud">
   <div id="crosshair"></div>
   <div id="hitmark"></div>
@@ -179,7 +216,7 @@
     <kbd>WASD</kbd> move · <kbd>Shift</kbd> sprint · <kbd>Ctrl</kbd> crouch · <kbd>Space</kbd> jump<br/>
     <kbd>Mouse</kbd> aim · <kbd>Click</kbd> fire · <kbd>Right-click</kbd> aim down sights · <kbd>Scroll</kbd> sniper zoom · <kbd>R</kbd> reload<br/>
     <kbd>1</kbd> pistol · <kbd>2</kbd> rifle · <kbd>3</kbd> shotgun · <kbd>4</kbd> knife · <kbd>5</kbd> sniper · <kbd>V</kbd> quick melee<br/>
-    <kbd>G</kbd> grenade · <kbd>E</kbd> enter / interact · <kbd>F</kbd> exit vehicle<br/>
+    <kbd>G</kbd> grenade · <kbd>E</kbd> enter / interact · <kbd>F</kbd> exit vehicle · <kbd>M</kbd> tactical map<br/>
     Choose story mode for a campaign or freeplay for endless waves.
   </p>
   <button id="startStory">Story campaign</button>
@@ -1424,7 +1461,12 @@ function resetLookTouch(e) {
 touchLook.addEventListener('touchend', resetLookTouch);
 touchLook.addEventListener('touchcancel', resetLookTouch);
 
+let tacticalMapOpen = false;
 addEventListener('keydown', e => {
+  if((e.code==='KeyM' || e.code==='Escape') && (tacticalMapOpen || e.code==='KeyM')){
+    e.preventDefault(); toggleWorldMap(e.code==='KeyM' ? !tacticalMapOpen : false); return;
+  }
+  if(tacticalMapOpen) return;
   keys[e.code] = true;
   if(e.code==='Tab'){ e.preventDefault(); missionVisible = !missionVisible; $('missionPanel').style.display = missionVisible ? 'block' : 'none'; }
   if(e.code==='Digit1') swap(0);
@@ -1465,6 +1507,7 @@ addEventListener('mousemove', e => {
   player.pitch = Math.max(-1.5, Math.min(1.5, player.pitch));
 });
 addEventListener('wheel', e => {
+  if(tacticalMapOpen) return;
   if(aiming && WEAPONS[cur].sniper){
     setZoom(zoomIdx + (e.deltaY>0 ? 1 : -1));
     return;
@@ -2095,7 +2138,7 @@ function update(dt){
   // radar refresh
   mapT -= dt;
   if(mapT <= 0){ mapT = 0.033; drawMap(); }
-  $('minimap').style.opacity = scoped ? 0 : 1;
+  $('minimap').style.opacity = (scoped || tacticalMapOpen) ? 0 : 1;
 
   if(msgT>0){ msgT-=dt; if(msgT<=0) $('msg').style.opacity=0; }
   if(hitT>0){ hitT-=dt; if(hitT<=0) $('hitmark').style.opacity=0; }
@@ -2117,7 +2160,7 @@ const mapCv = $('mapcv'), mctx = mapCv.getContext('2d');
 const MAP_RANGE = 60;           // world units shown from the player outwards
 const MAP_R = mapCv.width/2;
 // static footprints of solid geometry, sampled once
-const mapBoxes = colliders.map(b => ({ x:(b.min.x+b.max.x)/2, z:(b.min.z+b.max.z)/2, w:b.max.x-b.min.x, d:b.max.z-b.min.z }));
+const mapBoxes = colliders.map(b => ({ x:(b.min.x+b.max.x)/2, z:(b.min.z+b.max.z)/2, w:b.max.x-b.min.x, d:b.max.z-b.min.z, h:b.max.y-b.min.y }));
 let mapT = 0;
 function drawMap(){
   const s2 = MAP_R / MAP_RANGE;   // px per world unit
@@ -2175,6 +2218,73 @@ function drawMap(){
   mctx.strokeStyle = 'rgba(201,242,77,0.3)'; mctx.lineWidth = 3;
   mctx.beginPath(); mctx.arc(MAP_R,MAP_R,MAP_R-2,0,Math.PI*2); mctx.stroke();
 }
+
+// ---------- full-screen tactical map ----------
+const worldMap = $('worldMap'), worldMapCv = $('worldMapCanvas'), wmctx = worldMapCv.getContext('2d');
+const mapLayers = { buildings:true, cover:true, enemies:true, pickups:true };
+let worldMapZoom = 4.2, worldMapPan = { x:0, z:0 }, mapDrag = null;
+
+function resizeWorldMap(){
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  worldMapCv.width = Math.round(innerWidth*dpr); worldMapCv.height = Math.round(innerHeight*dpr);
+  wmctx.setTransform(dpr,0,0,dpr,0,0);
+}
+function toggleWorldMap(open){
+  tacticalMapOpen = open;
+  worldMap.classList.toggle('open', open); worldMap.setAttribute('aria-hidden', String(!open));
+  firing = false; aiming = false;
+  if(open){
+    if(document.pointerLockElement) document.exitPointerLock();
+    worldMapPan = { x:player.pos.x, z:player.pos.z }; resizeWorldMap(); drawWorldMap();
+  } else if(!dead && $('overlay').style.display==='none' && !isTouchDevice){
+    renderer.domElement.requestPointerLock();
+  }
+}
+function worldToMap(x,z){ return { x:innerWidth/2+(x-worldMapPan.x)*worldMapZoom, y:innerHeight/2+(z-worldMapPan.z)*worldMapZoom }; }
+function drawWorldMap(){
+  if(!tacticalMapOpen) return;
+  wmctx.clearRect(0,0,innerWidth,innerHeight); wmctx.fillStyle='#080c0f'; wmctx.fillRect(0,0,innerWidth,innerHeight);
+  const step = worldMapZoom > 7 ? 10 : 20;
+  wmctx.lineWidth=1; wmctx.strokeStyle='rgba(139,154,168,.12)'; wmctx.beginPath();
+  const left=worldMapPan.x-innerWidth/(2*worldMapZoom), right=worldMapPan.x+innerWidth/(2*worldMapZoom);
+  const top=worldMapPan.z-innerHeight/(2*worldMapZoom), bottom=worldMapPan.z+innerHeight/(2*worldMapZoom);
+  for(let x=Math.floor(left/step)*step;x<=right;x+=step){ const p=worldToMap(x,0); wmctx.moveTo(p.x,0);wmctx.lineTo(p.x,innerHeight); }
+  for(let z=Math.floor(top/step)*step;z<=bottom;z+=step){ const p=worldToMap(0,z); wmctx.moveTo(0,p.y);wmctx.lineTo(innerWidth,p.y); } wmctx.stroke();
+  for(const b of mapBoxes){
+    const building=b.h>3.2 && Math.max(b.w,b.d)>5;
+    if((building&&!mapLayers.buildings)||(!building&&!mapLayers.cover)) continue;
+    const p=worldToMap(b.x-b.w/2,b.z-b.d/2);
+    wmctx.fillStyle=building?'rgba(107,122,132,.72)':'rgba(178,192,200,.65)';
+    wmctx.strokeStyle=building?'rgba(200,216,224,.42)':'rgba(230,238,242,.32)';
+    wmctx.fillRect(p.x,p.y,b.w*worldMapZoom,b.d*worldMapZoom); wmctx.strokeRect(p.x,p.y,b.w*worldMapZoom,b.d*worldMapZoom);
+  }
+  if(mapLayers.pickups) for(const p of pickups){
+    if(p.kind==='grenade') continue; const q=worldToMap(p.obj.position.x,p.obj.position.z);
+    wmctx.fillStyle='#c9f24d'; wmctx.beginPath(); wmctx.arc(q.x,q.y,Math.max(3,worldMapZoom*.7),0,Math.PI*2); wmctx.fill();
+  }
+  if(mapLayers.enemies) for(const e of enemies){
+    if(e.dead) continue; const q=worldToMap(e.obj.position.x,e.obj.position.z);
+    wmctx.fillStyle=e.name==='Heavy'?'#7fb3ff':e.name==='Rusher'?'#9be36f':'#ff5a5a';
+    wmctx.beginPath(); wmctx.arc(q.x,q.y,Math.max(4,worldMapZoom*.85),0,Math.PI*2); wmctx.fill();
+  }
+  const pp=worldToMap(player.pos.x,player.pos.z); wmctx.save(); wmctx.translate(pp.x,pp.y); wmctx.rotate(-player.yaw);
+  wmctx.fillStyle='#c9f24d'; wmctx.shadowColor='#c9f24d'; wmctx.shadowBlur=10; wmctx.beginPath(); wmctx.moveTo(0,-12);wmctx.lineTo(8,9);wmctx.lineTo(0,5);wmctx.lineTo(-8,9);wmctx.closePath();wmctx.fill();wmctx.restore();
+  wmctx.fillStyle='rgba(201,242,77,.7)'; wmctx.font='10px ui-monospace, monospace'; wmctx.fillText('N',innerWidth/2-4,20);
+  $('mapZoomReadout').textContent=Math.round(worldMapZoom/4.2*100)+'%';
+}
+worldMapCv.addEventListener('wheel', e=>{
+  e.preventDefault();
+  const dy=e.deltaY*(e.deltaMode===1?16:e.deltaMode===2?100:1), next=Math.max(1.8,Math.min(12,worldMapZoom*Math.exp(-dy*.0015)));
+  const wx=worldMapPan.x+(e.clientX-innerWidth/2)/worldMapZoom, wz=worldMapPan.z+(e.clientY-innerHeight/2)/worldMapZoom;
+  worldMapPan.x=wx-(e.clientX-innerWidth/2)/next; worldMapPan.z=wz-(e.clientY-innerHeight/2)/next; worldMapZoom=next; drawWorldMap();
+},{passive:false});
+worldMapCv.addEventListener('pointerdown',e=>{ mapDrag={x:e.clientX,y:e.clientY,px:worldMapPan.x,pz:worldMapPan.z}; worldMapCv.setPointerCapture(e.pointerId); worldMapCv.classList.add('dragging'); });
+worldMapCv.addEventListener('pointermove',e=>{ if(!mapDrag)return; worldMapPan.x=mapDrag.px-(e.clientX-mapDrag.x)/worldMapZoom;worldMapPan.z=mapDrag.pz-(e.clientY-mapDrag.y)/worldMapZoom;drawWorldMap(); });
+worldMapCv.addEventListener('pointerup',()=>{ mapDrag=null;worldMapCv.classList.remove('dragging'); });
+$('mapClose').addEventListener('click',()=>toggleWorldMap(false));
+$('minimap').addEventListener('click',()=>toggleWorldMap(true));
+document.querySelectorAll('[data-map-layer]').forEach(el=>el.addEventListener('change',()=>{ mapLayers[el.dataset.mapLayer]=el.checked;drawWorldMap(); }));
+addEventListener('resize',()=>{ if(tacticalMapOpen){resizeWorldMap();drawWorldMap();} });
 
 // ---------- start ----------
 function enableTouchUI() {
